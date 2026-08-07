@@ -1,0 +1,67 @@
+{
+  "translation": {
+    "login": {
+      "welcome": "مرحباً بعودتك",
+      "signin": "تسجيل الدخول إلى حسابك",
+      "username": "اسم المستخدم",
+      "password": "كلمة المرور",
+      "forgot_password": "هل نسيت كلمة المرور؟",
+      "submit": "تسجيل الدخول",
+      "no_account": "ليس لديك حساب؟"
+    },
+    "sidebar": {
+      "dashboard": "لوحة القيادة",
+      "admin_dashboard": "لوحة تحكم الإدارة",
+      "students": "الطلاب",
+      "student_list": "قائمة الطلاب",
+      "student_details": "تفاصيل الطالب",
+      "inquiries": "الاستفسارات",
+      "admissions": "القبول",
+      "bulk_import": "استيراد الطلاب بالجملة",
+      "student_card": "بطاقة الطالب",
+      "teachers": "المعلمون",
+      "parents": "الآباء",
+      "guardians": "أولياء الأمور",
+      "academic": "أكاديمي",
+      "classes": "الفصول",
+      "sections": "الأقسام",
+      "subjects": "المواد الدراسية",
+      "syllabus": "المنهج",
+      "attendance": "الحضور",
+      "student_attendance": "حضور الطلاب",
+      "teacher_attendance": "حضور المعلمين",
+      "finance": "المالية",
+      "fees_collection": "تحصيل الرسوم",
+      "expenses": "المصروفات",
+      "reports": "التقارير",
+      "users": "المستخدمين",
+      "settings": "الإعدادات",
+      "application": "التطبيق",
+      "peoples": "الأشخاص",
+      "management": "الإدارة",
+      "leave_management": "إدارة الإجازات",
+      "examinations": "الامتحانات"
+    },
+    "table": {
+      "id": "المعرف",
+      "name": "الاسم",
+      "roll_no": "رقم الجلوس",
+      "class": "الفصل",
+      "section": "القسم",
+      "gender": "الجنس",
+      "date_of_birth": "تاريخ الميلاد",
+      "parent_name": "اسم ولي الأمر",
+      "mobile_number": "رقم الهاتف المحمول",
+      "address": "العنوان",
+      "status": "الحالة",
+      "action": "إجراء",
+      "date": "التاريخ",
+      "amount": "المبلغ"
+    },
+    "header": {
+      "language": "اللغة",
+      "english": "English",
+      "arabic": "العربية"
+    }
+  }
+}

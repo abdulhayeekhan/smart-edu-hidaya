@@ -1,0 +1,67 @@
+{
+  "translation": {
+    "login": {
+      "welcome": "Welcome back",
+      "signin": "Sign In to your Account",
+      "username": "Username",
+      "password": "Password",
+      "forgot_password": "Forgot Password?",
+      "submit": "Sign In",
+      "no_account": "Don't have an account?"
+    },
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "admin_dashboard": "Admin Dashboard",
+      "students": "Students",
+      "student_list": "Student List",
+      "student_details": "Student Details",
+      "inquiries": "Inquiries",
+      "admissions": "Admissions",
+      "bulk_import": "Bulk Students Import",
+      "student_card": "Student Card",
+      "teachers": "Teachers",
+      "parents": "Parents",
+      "guardians": "Guardians",
+      "academic": "Academic",
+      "classes": "Classes",
+      "sections": "Sections",
+      "subjects": "Subjects",
+      "syllabus": "Syllabus",
+      "attendance": "Attendance",
+      "student_attendance": "Student Attendance",
+      "teacher_attendance": "Teacher Attendance",
+      "finance": "Finance",
+      "fees_collection": "Fees Collection",
+      "expenses": "Expenses",
+      "reports": "Reports",
+      "users": "Users",
+      "settings": "Settings",
+      "application": "Application",
+      "peoples": "Peoples",
+      "management": "Management",
+      "leave_management": "Leave Management",
+      "examinations": "Examinations"
+    },
+    "table": {
+      "id": "ID",
+      "name": "Name",
+      "roll_no": "Roll No",
+      "class": "Class",
+      "section": "Section",
+      "gender": "Gender",
+      "date_of_birth": "Date of Birth",
+      "parent_name": "Parent Name",
+      "mobile_number": "Mobile Number",
+      "address": "Address",
+      "status": "Status",
+      "action": "Action",
+      "date": "Date",
+      "amount": "Amount"
+    },
+    "header": {
+      "language": "Language",
+      "english": "English",
+      "arabic": "العربية"
+    }
+  }
+}

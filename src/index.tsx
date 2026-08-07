@@ -1,0 +1,50 @@
+import React from "react";
+import "./configs/axiosSetup";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { base_path } from "./environment";
+import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
+import "../src/style/css/feather.css";
+import "../src/index.scss";
+import {store} from "./store";
+import { Provider } from "react-redux";
+import "../src/style/icon/boxicons/boxicons/css/boxicons.min.css";
+import "../src/style/icon/weather/weathericons.css";
+import "../src/style/icon/typicons/typicons.css";
+import "../src/style/icon/fontawesome/css/fontawesome.min.css";
+import "../src/style/icon/fontawesome/css/all.min.css";
+import "../src/style/icon/ionic/ionicons.css";
+import "../src/style/icon/tabler-icons/webfont/tabler-icons.css";
+import ALLRoutes from "./feature-module/router/router";
+import "../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js";
+import { AuthProvider } from './context/AuthContext';
+import { Toaster, toast } from "react-hot-toast";
+import FirefoxGuard from './hooks/FirefoxGuardProps';
+import './core/i18n/i18n'; 
+
+// Suppress 404 toast errors globally
+const originalToastError = toast.error;
+toast.error = (message: any, options?: any) => {
+  if (typeof message === 'string' && message.includes('status code 404')) {
+    return ''; // Suppress
+  }
+  return originalToastError(message, options);
+};
+
+const root = ReactDOM.createRoot(
+  document.getElementById("root") as HTMLElement
+);
+root.render(
+  <React.StrictMode>
+    <Provider store={store}>
+      {/* <FirefoxGuard> */}
+      <BrowserRouter basename={base_path}>
+        <Toaster position="top-right" reverseOrder={false} />
+        <AuthProvider>
+          <ALLRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+      {/* </FirefoxGuard> */}
+    </Provider>
+  </React.StrictMode>
+);
