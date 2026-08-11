@@ -12,6 +12,8 @@ export interface Campus {
   address?: string
   city?: string
   country?: string
+  hasUploaded?: boolean
+  allowBulkImport?: boolean
   [key: string]: any
 }
 
@@ -61,14 +63,16 @@ export const AddCampus = createAsyncThunk<Campus, Partial<Campus>>(
   'campus/add',
   async (body, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${baseURL}/api/campus/addcampus`, body)
+      const response = await axios.post(`${baseURL}/api/Campus/AddCampus`, body)
       const res = response.data
       if (res.status) toast.success('🎉 Campus has been added successfully!')
       else toast.error(res.message)
       return res.data as Campus
     } catch (error: any) {
-      toast.error(error.message)
-      return rejectWithValue(error.message)
+      console.error("AddCampus Error:", error.response?.data || error.message);
+      const errorMsg = error.response?.data?.title || error.response?.data?.message || error.message;
+      toast.error(`Error: ${errorMsg}`);
+      return rejectWithValue(errorMsg)
     }
   }
 )

@@ -4,6 +4,7 @@ import Header from "../core/common/header";
 import Sidebar from "../core/common/sidebar";
 import ThemeSettings from "../core/common/theme-settings";
 import Loader from "../core/common/loader";
+import ImageWithBasePath from "../core/common/imageWithBasePath";
 import { useEffect, useState } from "react";
 import { all_routes } from "./router/all_routes";
 const Feature = () => {
@@ -45,10 +46,10 @@ const Feature = () => {
       // Show the loader when navigating to a new route
       setShowLoader(true);
 
-      // Hide the loader immediately for instant navigation
+      // Hide the loader after delay so gif animation completes
       const timeoutId = setTimeout(() => {
         setShowLoader(false);
-      }, 0);
+      }, 2500);
 
       return () => {
         clearTimeout(timeoutId); // Clear the timeout when component unmounts
@@ -60,8 +61,8 @@ const Feature = () => {
   }, [location.pathname]);
   const Preloader = () => {
     return (
-      <div id="global-loader">
-        <div className="page-loader"></div>
+      <div id="global-loader" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 9999 }}>
+        <ImageWithBasePath src="assets/img/Educatin.gif" alt="Loading..." style={{ maxWidth: '280px', height: 'auto' }} />
       </div>
     );
   };

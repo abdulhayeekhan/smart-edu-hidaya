@@ -440,7 +440,7 @@ const CampusList = () => {
         </div>
       </div>
       {/* /Page Wrapper */}
-      <CampusModal selectedId={selectedId}/>
+      <CampusModal selectedId={selectedId} onSuccess={GetCampuses} />
     </>
   );
 };

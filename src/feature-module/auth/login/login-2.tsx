@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { all_routes } from "../../router/all_routes";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
-import { Companylogo, Copyright, CoverPhoto, CurrYear, BrandName } from '../../../environment'
+import { Companylogo, Copyright, CoverPhoto, CurrYear } from '../../../environment'
 import useAuth from "../../../hooks/useAuth";
 import { LoginParams } from "../../../context/AuthContext";
 
@@ -10,7 +10,6 @@ type PasswordField = "password";
 
 const Login2 = () => {
   const routes = all_routes;
-  const navigation = useNavigate();
 
 
   const [passwordVisibility, setPasswordVisibility] = useState({
@@ -192,9 +191,9 @@ const Login2 = () => {
               <div className="w-100 p-4 p-md-5 fade-in-element" style={{ maxWidth: '520px', animationDelay: '0.2s' }}>
                 <form onSubmit={e => onSubmit(e)}>
                   
-                  {/* Mobile Logo */}
-                  <div className="d-block d-lg-none text-center mb-5">
-                    <ImageWithBasePath src={Companylogo} className="img-fluid" alt="Logo" style={{ maxWidth: '160px' }} />
+                  {/* Portal Logo */}
+                  <div className="text-center mb-4">
+                    <ImageWithBasePath src={Companylogo} className="img-fluid" alt="Hidaya Logo" style={{ maxWidth: '200px', height: 'auto' }} />
                   </div>
 
                   <div className="card border-0 bg-transparent">

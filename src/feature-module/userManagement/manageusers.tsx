@@ -12,7 +12,7 @@ import useRegionsList from "../../core/common/selectoption/master/useRegions";
 import { all_routes } from "../router/all_routes";
 import TooltipOption from "../../core/common/tooltipOption";
 import { useDispatch, useSelector } from "react-redux";
-import { GetUsers, AddUser, DecryptPassword } from '../../store/apps/account'
+import { GetUsers, AddUser, UpdateUser, DecryptPassword } from '../../store/apps/account'
 import type { AppDispatch, RootState } from '../../store';
 import Swal from "sweetalert2";
 import CommonSelect2 from "../../core/common/commonSelect2";
@@ -80,6 +80,72 @@ const Manageusers = () => {
   const rolesList = useRolesList(usersInfo?.userLevel)
   const campusesList = useCampusesList();
   const regionsList = useRegionsList();
+
+  const [usersEditInfo, setUsersEditInfo] = useState({
+    id: 0,
+    userLevel: 0,
+    userLevelId: 0,
+    roleId: 0,
+    username: '',
+    firstname: '',
+    lastname: '',
+    email: '',
+    contactNumber: '',
+    isEnabled: true
+  })
+  const editRolesList: any[] = useRolesList(usersEditInfo?.userLevel) || []
+  const editCloseBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleEditUserLevel = async (value: string | number) => {
+    const userLevel = Number(value);
+    setUsersEditInfo((prev) => ({ ...prev, userLevel, userLevelId: 0, roleId: 0 }));
+  }
+  const handleEditUserRole = async (value: string | number) => {
+    setUsersEditInfo((prev) => ({ ...prev, roleId: Number(value) }));
+  }
+  const handleEditUserLevelId = (value: number) => {
+    setUsersEditInfo(prev => ({ ...prev, userLevelId: value }));
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    let newValue = value;
+    if (name === "username") newValue = value.toLowerCase().replace(/\s+/g, "");
+    setUsersEditInfo((prev) => ({
+      ...prev,
+      [name]: e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : newValue,
+    }));
+  };
+
+  const handleEdit = (record: User) => {
+    setUsersEditInfo({
+      id: record.id || 0,
+      userLevel: record.userLevel || 0,
+      userLevelId: record.userLevelId || 0,
+      roleId: record.roleId || 0,
+      username: record.username || '',
+      firstname: record.firstname || '',
+      lastname: record.lastname || '',
+      email: record.email || '',
+      contactNumber: record.contactNumber || '',
+      isEnabled: record.isEnabled
+    });
+  };
+
+  const [editLoading, setEditLoading] = useState(false)
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditLoading(true)
+    try {
+      await dispatch(UpdateUser(usersEditInfo))
+      editCloseBtnRef.current?.click();
+      dispatch(GetUsers({ pageNo, pageSize: pageSizes, username, email, contactNumber, name }))
+    } catch (error) {
+      console.error("Error updating user:", error);
+    } finally {
+      setEditLoading(false)
+    }
+  };
 
 
   const handleUserLevel = async (value: string | number) => {
@@ -152,6 +218,7 @@ const Manageusers = () => {
         isEnabled: true
       })
       closeBtnRef.current?.click();
+      dispatch(GetUsers({ pageNo, pageSize: pageSizes, username, email, contactNumber, name }))
     } catch (error) {
       console.error("Error creating role:", error);
       alert("Error creating role!");
@@ -282,6 +349,7 @@ const Manageusers = () => {
                     className="dropdown-item rounded-1"
                     data-bs-toggle="modal"
                     data-bs-target="#edit_role"
+                    onClick={() => handleEdit(record)}
                     to="#"
                   >
                     <i className="ti ti-edit-circle me-2" />
@@ -632,49 +700,50 @@ const Manageusers = () => {
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h4 className="modal-title">Edit Role</h4>
+                <h4 className="modal-title">Edit User</h4>
                 <button
                   type="button"
                   className="btn-close custom-btn-close"
                   data-bs-dismiss="modal"
                   aria-label="Close"
+                  ref={editCloseBtnRef}
                 >
                   <i className="ti ti-x" />
                 </button>
               </div>
-              <form onSubmit={handleSaveSubmit}>
+              <form onSubmit={handleUpdateSubmit}>
                 <div className="modal-body">
                   <div className="row">
                     <div className="col-md-12">
                       <div className="mb-2">
                         <label className="form-label">User Name <span className="text-danger">*</span></label>
-                        <input type="text" name="username" value={usersInfo?.username} placeholder="Enter User Name" onChange={handleAddChange} className="form-control" />
+                        <input type="text" name="username" value={usersEditInfo?.username} placeholder="Enter User Name" onChange={handleEditChange} className="form-control" disabled />
                       </div>
                     </div>
                     <div className="col-md-6">
                       <div className="mb-2">
                         <label className="form-label">First Name <span className="text-danger">*</span></label>
-                        <input type="text" name="firstname" value={usersInfo?.firstname} onChange={handleAddChange} placeholder="Enter First Name" className="form-control" />
+                        <input type="text" name="firstname" value={usersEditInfo?.firstname} onChange={handleEditChange} placeholder="Enter First Name" className="form-control" />
                       </div>
                     </div>
                     <div className="col-md-6">
                       <div className="mb-2">
                         <label className="form-label">Last Name <span className="text-danger">*</span></label>
-                        <input type="text" name="lastname" value={usersInfo?.lastname} onChange={handleAddChange} placeholder="Enter Last Name" className="form-control" />
+                        <input type="text" name="lastname" value={usersEditInfo?.lastname} onChange={handleEditChange} placeholder="Enter Last Name" className="form-control" />
                       </div>
                     </div>
 
                     <div className="col-md-6">
                       <div className="mb-2">
                         <label className="form-label">Email <span className="text-danger">*</span></label>
-                        <input type="text" name="email" value={usersInfo?.email} onChange={handleAddChange} placeholder="Enter Email" className="form-control" />
+                        <input type="text" name="email" value={usersEditInfo?.email} onChange={handleEditChange} placeholder="Enter Email" className="form-control" />
                       </div>
                     </div>
 
                     <div className="col-md-6">
                       <div className="mb-2">
                         <label className="form-label">Contact Number <span className="text-danger">*</span></label>
-                        <input type="text" name="contactNumber" value={usersInfo?.contactNumber} onChange={handleAddChange} placeholder="Enter Contact Number" className="form-control" />
+                        <input type="text" name="contactNumber" value={usersEditInfo?.contactNumber} onChange={handleEditChange} placeholder="Enter Contact Number" className="form-control" />
                       </div>
                     </div>
 
@@ -684,8 +753,8 @@ const Manageusers = () => {
                         <CommonSelect2
                           className="select"
                           options={userLevels}
-                          onChange={(option) => handleUserLevel(option ? option.value : 0)}
-                          defaultValue={userLevels[0]}
+                          onChange={(option) => handleEditUserLevel(option ? option.value : 0)}
+                          defaultValue={userLevels.find(level => level.value === usersEditInfo?.userLevel)}
                         />
                       </div>
                     </div>
@@ -695,53 +764,38 @@ const Manageusers = () => {
                         <label className="form-label">Roles <span className="text-danger">*</span></label>
                         <CommonSelect2
                           className="select"
-                          options={rolesList}
-                          onChange={(option) => handleUserRole(option ? option.value : 0)}
-                          defaultValue={rolesList[0]}
+                          options={editRolesList}
+                          onChange={(option) => handleEditUserRole(option ? option.value : 0)}
+                          defaultValue={editRolesList.find(role => role.value === usersEditInfo?.roleId)}
                         />
                       </div>
                     </div>
-                    {usersInfo?.userLevel === 2 && (
+                    {usersEditInfo?.userLevel === 2 && (
                       <div className="col-md-12">
                         <div className="mb-2">
                           <label className="form-label">Region <span className="text-danger">*</span></label>
                           <CommonSelect3
                             className="select"
                             options={regionsList}
-                            onChange={(option) => handleUserLevelId(Number(option?.value || 0))}
-                            value={usersInfo?.userLevelId ? regionsList.find(region => region.value === usersInfo.userLevelId) || null : null}
+                            onChange={(option) => handleEditUserLevelId(Number(option?.value || 0))}
+                            value={usersEditInfo?.userLevelId ? regionsList.find(region => region.value === usersEditInfo.userLevelId) || null : null}
                           />
                         </div>
                       </div>
                     )}
-                    {usersInfo?.userLevel === 3 && (
+                    {usersEditInfo?.userLevel === 3 && (
                       <div className="col-md-12">
                         <div className="mb-2">
                           <label className="form-label">Campus <span className="text-danger">*</span></label>
                           <CommonSelect3
                             className="select"
                             options={campusesList}
-                            onChange={(option) => handleUserLevelId(Number(option?.value || 0))}
-                            value={usersInfo?.userLevelId ? campusesList.find(campus => campus.value === usersInfo.userLevelId) || null : null}
+                            onChange={(option) => handleEditUserLevelId(Number(option?.value || 0))}
+                            value={usersEditInfo?.userLevelId ? campusesList.find(campus => campus.value === usersEditInfo.userLevelId) || null : null}
                           />
                         </div>
                       </div>
                     )}
-
-
-
-                    <div className="col-md-6">
-                      <div className="mb-2">
-                        <label className="form-label">Password <span className="text-danger">*</span></label>
-                        <input type="password" name="password" value={usersInfo?.password} onChange={handleAddChange} placeholder="Enter Password" className="form-control" />
-                      </div>
-                    </div>
-                    <div className="col-md-6">
-                      <div className="mb-2">
-                        <label className="form-label">Confirm Password</label>
-                        <input type="password" name="confirmPass" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder="Enter Confirm Password" className="form-control" />
-                      </div>
-                    </div>
 
                     <div className="col-md-12">
                       <div className="mb-2">
@@ -755,10 +809,10 @@ const Manageusers = () => {
                               className="form-check-input"
                               type="checkbox"
                               name="isEnabled"
-                              checked={usersInfo?.isEnabled}
-                              onChange={handleAddChange}
+                              checked={usersEditInfo?.isEnabled}
+                              onChange={handleEditChange}
                               role="switch"
-                              id="switch-sm2"
+                              id="switch-sm3"
                             />
                           </div>
                         </div>
@@ -774,8 +828,8 @@ const Manageusers = () => {
                   >
                     Cancel
                   </Link>
-                  <button type="submit" disabled={saveloading || usersInfo?.password !== confirmPass || usersInfo?.username === '' || confirmPass === ''} className="btn btn-primary" >
-                    {saveloading ? 'Loading...' : 'Add Role'}
+                  <button type="submit" disabled={editLoading || usersEditInfo?.username === ''} className="btn btn-primary" >
+                    {editLoading ? 'Loading...' : 'Save Changes'}
                   </button>
                 </div>
               </form>

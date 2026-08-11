@@ -28,6 +28,8 @@ interface CampusInput {
   addedAt: string;      // ISO timestamp string
   isEnabled: boolean;
   isDeleted: boolean;
+  hasUploaded: boolean;
+  allowBulkImport: boolean;
 }
 
 type OptionType = {
@@ -37,9 +39,10 @@ type OptionType = {
 
 type CampusModalProps = {
   selectedId?: number | null;
+  onSuccess?: () => void;
 };
 
-const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
+const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
   const RegionsList = useRegionsList()
   const citiesList: OptionType[] = useCitiesList();
   const dispatch = useDispatch<AppDispatch>();
@@ -54,10 +57,12 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
     contactNumber: "",
     email: "",
     regionId: 0,
-    addedBy: 3,
+    addedBy: 1,
     addedAt: new Date().toISOString(),
     isEnabled: true,
     isDeleted: false,
+    hasUploaded: true,
+    allowBulkImport: true,
   })
   const [campusEdit, setCampusEdit] = useState<CampusInput>({
     id: 0,
@@ -75,6 +80,8 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
     addedAt: new Date().toISOString(),
     isEnabled: true,
     isDeleted: false,
+    hasUploaded: true,
+    allowBulkImport: true,
   })
   const [isEditLoading, setIsEditLoading] = useState(false)
   console.log('campusEdit:',campusEdit)
@@ -140,6 +147,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
     setSaveLoading(true);
     try {
       await dispatch(AddCampus(campusInfo))
+      if (onSuccess) onSuccess();
       // Close the modal via ref
       closeBtnRef.current?.click();
 
@@ -158,6 +166,8 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
         addedAt: new Date().toISOString(),
         isEnabled: true,
         isDeleted: false,
+        hasUploaded: true,
+        allowBulkImport: true,
       })
     } catch (error) {
       console.error("Save failed:", error);
@@ -171,6 +181,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
     setSaveLoading(true);
     try {
       await dispatch(UpdateCampus(campusEdit))
+      if (onSuccess) onSuccess();
       // Close the modal via ref
       closeBtnRef.current?.click();
 
@@ -190,6 +201,8 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId }) => {
         addedAt: new Date().toISOString(),
         isEnabled: true,
         isDeleted: false,
+        hasUploaded: true,
+        allowBulkImport: true,
       })
     } catch (error) {
       console.error("Save failed:", error);

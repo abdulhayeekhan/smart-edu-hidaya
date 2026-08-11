@@ -47,7 +47,7 @@ const ClassTeacherManagement = () => {
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
-    dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true }));
+    dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true, campusId: userCampusId }));
     dispatch(GetAllCampus({ pageNo: 1, pageSize: 1000, search: "" }));
     dispatch(GetGrades());
     dispatch(GetSections());
@@ -83,7 +83,7 @@ const ClassTeacherManagement = () => {
             isEnabled: true
           });
           document.getElementById('close-add-modal')?.click();
-          dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true }));
+          dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true, campusId: userCampusId }));
         }
       });
     }
@@ -101,7 +101,7 @@ const ClassTeacherManagement = () => {
     })).then((res: any) => {
       if (!res.error) {
         document.getElementById('close-edit-modal')?.click();
-        dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true }));
+        dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true, campusId: userCampusId }));
       }
     });
   };
@@ -112,7 +112,7 @@ const ClassTeacherManagement = () => {
       dispatch(DeleteClassTeacher(deleteId)).then((res: any) => {
         if (!res.error) {
           document.getElementById('close-delete-modal')?.click();
-          dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true }));
+          dispatch(GetAllClassTeachers({ pageNo: 1, pageSize: 1000, search: "", isEnabled: true, campusId: userCampusId }));
         }
       });
     }

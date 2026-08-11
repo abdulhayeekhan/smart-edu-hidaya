@@ -14,7 +14,7 @@ import {
 } from "../../data/redux/sidebarSlice";
 import { useState } from "react";
 import { all_routes } from "../../../feature-module/router/all_routes";
-import { Companylogo, CompanyWhiteLogo } from '../../../environment'
+import { Companylogo, CompanyWhiteLogo, CompnayIcon } from '../../../environment'
 import useAuth from "../../../hooks/useAuth";
 import { MouseEvent } from "react";
 
@@ -59,9 +59,6 @@ const Header = () => {
     }
   };
   const location = useLocation();
-  const toggleNotification = () => {
-    setNotificationVisible(!notificationVisible);
-  };
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const toggleFullscreen = () => {
@@ -114,7 +111,7 @@ const Header = () => {
     ? (JSON.parse(storedUserData) as UserResponse)
     : null;
 
-  
+
   const { logout } = useAuth()
   const handleLogout = async (e: MouseEvent<HTMLAnchorElement>): Promise<void> => {
     e.preventDefault();
@@ -132,13 +129,13 @@ const Header = () => {
           onMouseLeave={onMouseLeave}
         >
           <Link to={routes.adminDashboard} className="logo logo-normal">
-            <ImageWithBasePath src={Companylogo} alt="Logo" />
+            <ImageWithBasePath src={Companylogo} alt="Hidaya Logo" />
           </Link>
           <Link to={routes.adminDashboard} className="logo-small">
-            <ImageWithBasePath src={Companylogo} alt="Logo" />
+            <ImageWithBasePath src={CompnayIcon} alt="Hidaya Logo" />
           </Link>
           <Link to={routes.adminDashboard} className="dark-logo">
-            <ImageWithBasePath src={CompanyWhiteLogo} alt="Logo" />
+            <ImageWithBasePath src={CompanyWhiteLogo} alt="Hidaya Logo" />
           </Link>
           <Link id="toggle_btn" to="#" onClick={handleToggleMiniSidebar}>
             <i className="ti ti-menu-deep" />
@@ -228,7 +225,7 @@ const Header = () => {
                         i18n.changeLanguage('en');
                         dispatch(setDataLayout('default_layout'));
                         // @ts-ignore
-                        if(typeof setRtl !== 'undefined') dispatch(setRtl(false)); 
+                        if (typeof setRtl !== 'undefined') dispatch(setRtl(false));
                       }}
                     >
                       {t('header.english')}
@@ -240,7 +237,7 @@ const Header = () => {
                         i18n.changeLanguage('ar');
                         dispatch(setDataLayout('rtl'));
                         // @ts-ignore
-                        if(typeof setRtl !== 'undefined') dispatch(setRtl(true)); 
+                        if (typeof setRtl !== 'undefined') dispatch(setRtl(true));
                       }}
                     >
                       {t('header.arabic')}

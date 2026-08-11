@@ -11,7 +11,8 @@ import {
   resetAllMode,
   setDataLayout,
 } from "../../data/redux/themeSettingSlice";
-import { Companylogo, CompnayIcon, Copyright, CompanyName, CoverPhoto } from '../../../environment'
+import { Companylogo } from '../../../environment'
+import { all_routes } from "../../../feature-module/router/all_routes";
 import usePreviousRoute from "./usePreviousRoute";
 import axios from "axios";
 const baseURL = process.env.REACT_APP_API_BASE_URL;
@@ -40,9 +41,7 @@ interface RoleRight {
 const Sidebar = () => {
   const { t } = useTranslation();
   const Location = useLocation();
-  const [permissions, setPermissions] = useState<any[]>([]);
   const [filteredSidebar, setFilteredSidebar] = useState<any[]>([]);
-  const [roleRights, setRoleRights] = useState<any[]>([]);
 
 
   const filterSidebarData = (
@@ -96,13 +95,11 @@ const Sidebar = () => {
         const fetchedRights = response?.data?.data || [];
         localStorage.setItem("roleRights", JSON.stringify(fetchedRights));
         
-        setRoleRights(fetchedRights);
         const filtered = await filterSidebarData(SidebarData, fetchedRights);
 
         setFilteredSidebar(filtered);
       } catch (err) {
         console.error("Error fetching permissions", err);
-        setPermissions([]);
       }
     };
 
@@ -222,17 +219,16 @@ const Sidebar = () => {
               <ul>
                 <li>
                   <Link
-                    to="#"
-                    className="d-flex align-items-center border border-white border-opacity-10 bg-transparent rounded p-2 mb-4"
+                    to={all_routes.adminDashboard}
+                    className="d-flex align-items-center justify-content-center bg-white rounded p-2 mb-4 shadow-sm"
+                    style={{ background: '#ffffff', borderRadius: '12px' }}
                   >
                     <ImageWithBasePath
-                      src={CompnayIcon}
-                      className="avatar avatar-md img-fluid rounded"
-                      alt="Profile"
+                      src={Companylogo}
+                      className="img-fluid"
+                      alt="Hidaya Logo"
+                      style={{ maxHeight: '48px', width: 'auto' }}
                     />
-                    <span className="text-dark ms-2 fw-normal">
-                      {CompanyName}
-                    </span>
                   </Link>
                 </li>
               </ul>
