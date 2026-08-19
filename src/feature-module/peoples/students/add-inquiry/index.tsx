@@ -96,7 +96,23 @@ const AddStudentInquiry = () => {
     const newErrors: Record<string, string> = {};
 
     // List of fields that ARE allowed to be empty
-    const optionalFields = ['middleName', 'sessionId', 'inquiryNo', 'pCountryId', 'cHouseNo', 'cStreetNo', 'cTown', 'pCityId', 'pProvinceId', 'pHouseNo', 'pStreetNo', 'pTown'];
+    const optionalFields = [
+      'middleName', 
+      'email', 
+      'cnic', 
+      'sessionId', 
+      'inquiryNo', 
+      'referenceId',
+      'pCountryId', 
+      'cHouseNo', 
+      'cStreetNo', 
+      'cTown', 
+      'pCityId', 
+      'pProvinceId', 
+      'pHouseNo', 
+      'pStreetNo', 
+      'pTown'
+    ];
 
     Object.keys(initialInquiryState).forEach((key) => {
       if (optionalFields.includes(key)) return;
@@ -117,8 +133,8 @@ const AddStudentInquiry = () => {
       }
     }
 
-    // 3. CNIC Validation (Format: 12345-1234567-1)
-    if (form.cnic) {
+    // 3. CNIC Validation (Format: 12345-1234567-1, only if filled)
+    if (form.cnic && form.cnic.trim() !== "") {
       const cnicRegex = /^\d{5}-\d{7}-\d{1}$/;
       if (!cnicRegex.test(form.cnic)) {
         newErrors['cnic'] = "CNIC must be in XXXXX-XXXXXXX-X format";
@@ -126,8 +142,10 @@ const AddStudentInquiry = () => {
     }
 
     // Specific validation for Contact Number (length check)
-    if (form.contactNumber.length < 14) { // +92321-3121145 is 14 chars
-      newErrors['contactNumber'] = "Please enter a valid mobile number";
+    if (form.contactNumber && form.contactNumber !== '+92') {
+      if (form.contactNumber.length < 14) { // +92321-3121145 is 14 chars
+        newErrors['contactNumber'] = "Please enter a valid mobile number";
+      }
     }
 
     setErrors(newErrors);
@@ -167,18 +185,6 @@ const AddStudentInquiry = () => {
   const [form, setForm] = useState<InquiryType>(initialInquiryState)
 
   // ---------------- HANDLE CHANGE ----------------
-  // const handleChange = (
-  //   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  // ) => {
-  //   const { name, value } = e.target
-  //   setForm(prev => ({
-  //     ...prev,
-  //     [name]:
-  //       e.target.type === 'number'
-  //         ? Number(value)
-  //         : value,
-  //   }))
-  // }
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -252,18 +258,50 @@ const AddStudentInquiry = () => {
     e.preventDefault();
     console.log('formdata:', form)
     if (!validateForm()) {
-      // Scroll to the first error or show a toast message
       toast.error("Please fill all required fields highlighted in red.");
       return;
     }
-    setIsSave(true)
+
+    const currentCountry = form.cCountryId ? Number(form.cCountryId) : 1;
+    const currentProvince = form.cProvinceId ? Number(form.cProvinceId) : 0;
+    const currentCity = form.cCityId ? Number(form.cCityId) : 0;
+    const currentHouseNo = form.cHouseNo || '';
+    const currentStreetNo = form.cStreetNo || '';
+    const currentTown = form.cTown || '';
+
+    const submitPayload: InquiryType = {
+      ...form,
+      referenceId: form.referenceId ? Number(form.referenceId) : 1,
+      sessionId: form.sessionId || (lastSessionId ? Number(lastSessionId) : 0),
+      cCountryId: currentCountry,
+      cProvinceId: currentProvince,
+      cCityId: currentCity,
+      cHouseNo: currentHouseNo,
+      cStreetNo: currentStreetNo,
+      cTown: currentTown,
+
+      // Automatically map permanent address from current address
+      pCountryId: form.pCountryId ? Number(form.pCountryId) : currentCountry,
+      pProvinceId: form.pProvinceId ? Number(form.pProvinceId) : currentProvince,
+      pCityId: form.pCityId ? Number(form.pCityId) : currentCity,
+      pHouseNo: form.pHouseNo || currentHouseNo,
+      pStreetNo: form.pStreetNo || currentStreetNo,
+      pTown: form.pTown || currentTown,
+
+      motherTongeId: form.motherTongeId ? Number(form.motherTongeId) : 1,
+      religionId: form.religionId ? Number(form.religionId) : 1,
+    };
+
+    setIsSave(true);
     try {
-      await dispatch(AddInquiry(form) as any);
+      const resultAction = await dispatch(AddInquiry(submitPayload) as any);
+      if (AddInquiry.fulfilled.match(resultAction)) {
+        navigate(routes.studentInquiry);
+      }
     } catch (error) {
-      console.log(error)
+      console.error("Error saving inquiry:", error);
     } finally {
-      setIsSave(false)
-      navigate(routes.studentInquiry)
+      setIsSave(false);
     }
   }
 

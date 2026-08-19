@@ -157,8 +157,10 @@ export const AddInquiry = createAsyncThunk<
       toast.error(data.message || 'Failed to add inquiry')
       return rejectWithValue(data.message)
     } catch (error: any) {
-      toast.error(error.message)
-      return rejectWithValue(error.message)
+      console.error("AddInquiry Error:", error);
+      const msg = error?.response?.data?.message || error?.response?.data?.title || error.message || 'Failed to add inquiry';
+      toast.error(msg)
+      return rejectWithValue(msg)
     }
   }
 )

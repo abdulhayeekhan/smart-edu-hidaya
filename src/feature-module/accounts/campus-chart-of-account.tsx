@@ -5,6 +5,7 @@ import PredefinedDateRanges from "../../core/common/datePicker";
 import CommonSelect from "../../core/common/commonSelect";
 import CommonSelect2 from "../../core/common/commonSelect2";
 import CommonSelect3 from "../../core/common/commonSelect3";
+import toast from "react-hot-toast";
 import {
     category2,
     coaentrylevel,
@@ -34,7 +35,7 @@ interface ChartOfAccountPayload {
     accountName: string;
     accountLevel: number;
     nature: string;
-    campusId?: string;
+    campusId?: number | null | string;
     mapping: string;
     isActive: boolean;
 }
@@ -62,10 +63,18 @@ const CampusChartOfAccount = () => {
     const navigate = useNavigate();
     const flattenAccounts = (nodes: any[]): any[] => {
         let result: any[] = [];
+        if (!Array.isArray(nodes)) return result;
         for (const node of nodes) {
-            result.push(node.account);
-            if (node.subAccounts && node.subAccounts.length > 0) {
-                result = result.concat(flattenAccounts(node.subAccounts));
+            if (node?.account) {
+                result.push(node.account);
+                if (node.subAccounts && node.subAccounts.length > 0) {
+                    result = result.concat(flattenAccounts(node.subAccounts));
+                }
+            } else if (node) {
+                result.push(node);
+                if (node.children && node.children.length > 0) {
+                    result = result.concat(flattenAccounts(node.children));
+                }
             }
         }
         return result;
@@ -404,19 +413,29 @@ const CampusChartOfAccount = () => {
         router: { push: (path: string) => void },
         AddCampusChartofAccount: (payload: ChartOfAccountPayload) => unknown
     ): Promise<void> => {
+        let {
+            account_Code,
+            account_Name,
+            account_mapping,
+            accountTypeId,
+            parentAccountId,
+            levelValue,
+            natureId,
+            campusId,
+        } = params;
+
+        if (!levelValue || levelValue === 0) {
+            toast.error("Please select an Entry Level");
+            return;
+        }
+
+        if (!account_Name || !account_Name.trim()) {
+            toast.error("Please enter Account Name");
+            return;
+        }
+
         setIsSubmit(true);
         try {
-            let {
-                account_Code,
-                account_Name,
-                account_mapping,
-                accountTypeId,
-                parentAccountId,
-                levelValue,
-                natureId,
-                campusId,
-            } = params;
-
             // reset parent if top-level
             if (levelValue === 1) {
                 parentAccountId = null;
@@ -429,34 +448,61 @@ const CampusChartOfAccount = () => {
             } else if (natureId) {
                 try {
                     const res = await axios.get<{ data: { accountName: string } }>(
-                        `${baseURL}/api/BChartOfAccount/getaccountbyid?id=${natureId}`
+                        `${baseURL}/api/BChartOfAccount/GetAccountById?id=${natureId}`
                     );
-                    nature = res.data.data.accountName;
+                    nature = res?.data?.data?.accountName || "";
                 } catch (err) {
                     console.error("Failed to fetch nature account name:", err);
-                    return;
+                    nature = "";
+                }
+            }
+
+            // Determine effective campusId
+            let effectiveCampusId: number | null = null;
+            if (campusId) {
+                effectiveCampusId = Number(campusId);
+            } else if (selectCampusId && selectCampusId > 0) {
+                effectiveCampusId = Number(selectCampusId);
+            } else {
+                try {
+                    const loginInfo = JSON.parse(localStorage.getItem('loginInfo') || '{}');
+                    if (loginInfo?.campusId) {
+                        effectiveCampusId = Number(loginInfo.campusId);
+                    }
+                } catch (e) {
+                    // ignore
                 }
             }
 
             // construct body
             const body: ChartOfAccountPayload = {
-                parentAccountId,
-                accountTypeId,
+                parentAccountId: parentAccountId || null,
+                accountTypeId: accountTypeId || null,
                 accountCode: account_Code,
                 accountName: account_Name,
                 accountLevel: levelValue,
                 nature,
                 mapping: account_mapping,
                 isActive: true,
-                ...(campusId ? { campusId } : {}),
+                ...(effectiveCampusId ? { campusId: effectiveCampusId } : {}),
             };
         
-            await dispatch(AddCampusChartofAccount(body));
+            await dispatch(AddCampusChartofAccount(body) as any);
             await GetAccounts(); // refresh latest list
 
             setAccountCode("");
             setAccountName("");
             setMapping("");
+            setNatureID(null);
+            setCampusId("");
+            setRegionId("");
+            setParentAccountId(null);
+            setAccountTypeId(null);
+            setHeadOfAccount(false);
+            setSubAccount(false);
+            setMainAccount(false);
+            setLevelValue(0);
+
             //close modal programmatically
             const closeBtn = document.querySelector<HTMLButtonElement>(
                 "#add_expenses .btn-close"
@@ -464,15 +510,9 @@ const CampusChartOfAccount = () => {
             closeBtn?.click();
         } catch (err) {
             console.error("Error submitting chart of account:", err);
+            toast.error("Error submitting chart of account");
         } finally {
             setIsSubmit(false);
-            setAccountCode("")
-            setAccountName("")
-            setMapping("")
-            setHeadOfAccount(false);
-            setSubAccount(false);
-            setMainAccount(false);
-            setLevelValue(0);
         }
     };
 

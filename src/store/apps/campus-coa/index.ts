@@ -31,7 +31,7 @@ export interface ChartOfAccountPayload {
     nature: string;
     mapping: string;
     isActive: boolean;
-    campusId?: string;
+    campusId?: number | null | string;
 }
 // --------------------
 // Async Thunks
@@ -133,59 +133,60 @@ export const AddCampusChartofAccount = createAsyncThunk<any, ChartOfAccountPaylo
     "addcampuschartofaccount",
     async (body, { rejectWithValue }) => {
         try {
-            // get latest financial year
-            const getRes: AxiosResponse<{ data: { id: number }[] }> = await axios.get(
-                `${baseURL}/api/financialyear/getfinancialyears`
-            );
-            const financialYearId = getRes?.data?.data.slice(-1)[0];
-
-            // create chart of account
+            // create chart of account first
             const response = await axios.post(
                 `${baseURL}/api/BChartOfAccount/AddAccount`,
                 body
             );
 
-            if (response.data.status === true) {
+            if (response.data.status === true || response.data.status === "true") {
                 // handle opening balance only for 4th level accounts
                 if (body?.accountLevel === 4) {
-                    const current = new Date();
-                    const voucherYear = current.getFullYear();
-
-                    const userInfo = JSON.parse(
-                        window.localStorage.getItem("userData") || "{}"
-                    );
-                    const createdBy = userInfo?.data?.id;
-
-                    const accountIdInfo = response?.data?.data?.id;
-
-                    const Newbody = [
-                        {
-                            financialYearId: financialYearId?.id,
-                            accountId: accountIdInfo,
-                            debitAmount: 0,
-                            creditAmount: 0,
-                            year: voucherYear,
-                            addedBy: createdBy,
-                            isHO: true,
-                        },
-                    ];
-
                     try {
+                        const current = new Date();
+                        const voucherYear = current.getFullYear();
+
+                        const userInfo = JSON.parse(
+                            window.localStorage.getItem("userData") || "{}"
+                        );
+                        const createdBy = userInfo?.data?.id;
+
+                        const accountIdInfo = response?.data?.data?.id;
+
+                        const getRes: AxiosResponse<{ data: { id: number }[] }> = await axios.get(
+                            `${baseURL}/api/FinancialYear/GetFinancialYears`
+                        );
+                        const financialYearId = getRes?.data?.data?.slice(-1)[0];
+
+                        const Newbody = [
+                            {
+                                financialYearId: financialYearId?.id,
+                                accountId: accountIdInfo,
+                                debitAmount: 0,
+                                creditAmount: 0,
+                                year: voucherYear,
+                                addedBy: createdBy,
+                                isHO: false,
+                                ...(body?.campusId ? { campusId: Number(body.campusId) } : {}),
+                            },
+                        ];
+
                         await axios.post(`${baseURL}/api/OBV/AddOpening`, Newbody);
                     } catch (errors: any) {
-                        toast.error("opening " + errors);
+                        console.error("OBV AddOpening error:", errors);
                     }
                 }
 
                 toast.success("Cong! chart of account saved successfully");
+                return response.data.data;
             } else {
-                toast.error(response.data.message);
+                toast.error(response.data.message || "Failed to save chart of account");
+                return rejectWithValue(response.data.message);
             }
-
-            return response.data.data;
-        } catch (error) {
-            console.error(error);
-            toast.error(String(error));
+        } catch (error: any) {
+            console.error("AddCampusChartofAccount Error:", error);
+            const errMsg = error?.response?.data?.message || error?.response?.data?.title || String(error);
+            toast.error(errMsg);
             return rejectWithValue(error);
         }
     }
