@@ -681,7 +681,7 @@ function LandscapeFeeVoucher({ datalist }: Props) {
                                         </table>
 
                                         {/* Student Photo */}
-                                        <div style={{ width: '68px', border: '1px solid #000', borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
+                                        <div style={{ width: '130px', border: '1px solid #000', borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
                                             <img 
                                                 src={voucher.studentImage} 
                                                 alt={voucher.studentName}
@@ -762,7 +762,7 @@ function LandscapeFeeVoucher({ datalist }: Props) {
                                     </table>
                                 </div>
 
-                                <div style={{ width: '310px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {/* Mobile Application Promo Section */}
                                     <div style={{ border: '1px solid #000', padding: '8px', borderRadius: '4px', textAlign: 'center', backgroundColor: '#fafafa' }}>
                                         
@@ -919,7 +919,7 @@ function LandscapeFeeVoucher({ datalist }: Props) {
                                         </table>
 
                                         {/* Student Photo */}
-                                        <div style={{ width: '50px', border: '1px solid #000', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
+                                        <div style={{ width: '105px', border: '1px solid #000', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
                                             <img 
                                                 src={voucher.studentImage} 
                                                 alt={voucher.studentName}
