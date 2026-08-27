@@ -14,6 +14,7 @@ export interface Campus {
   country?: string
   hasUploaded?: boolean
   allowBulkImport?: boolean
+  isPayProEnabled?: boolean
   [key: string]: any
 }
 

@@ -1,8 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Spin } from "antd";
-import {
-  hostelType,
-} from "../../../core/common/selectoption/selectoption";
 import useRegionsList from "../../../core/common/selectoption/master/useRegions";
 import { useCitiesList } from "../../../core/common/selectoption/address/useCitiesList";
 import CommonSelect from "../../../core/common/commonSelect2";
@@ -30,6 +27,7 @@ interface CampusInput {
   isDeleted: boolean;
   hasUploaded: boolean;
   allowBulkImport: boolean;
+  isPayProEnabled: boolean;
 }
 
 type OptionType = {
@@ -63,6 +61,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
     isDeleted: false,
     hasUploaded: true,
     allowBulkImport: true,
+    isPayProEnabled: true,
   })
   const [campusEdit, setCampusEdit] = useState<CampusInput>({
     id: 0,
@@ -82,6 +81,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
     isDeleted: false,
     hasUploaded: true,
     allowBulkImport: true,
+    isPayProEnabled: true,
   })
   const [isEditLoading, setIsEditLoading] = useState(false)
   console.log('campusEdit:',campusEdit)
@@ -102,7 +102,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
     if (selectedId !== null || selectedId !== '') {
       GetSingleCampus()
     }
-  }, [selectedId]);
+  }, [selectedId, dispatch]);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   const handleCampusInfoChange = (field: keyof CampusInput, value: any) => {
@@ -168,6 +168,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
         isDeleted: false,
         hasUploaded: true,
         allowBulkImport: true,
+        isPayProEnabled: true,
       })
     } catch (error) {
       console.error("Save failed:", error);
@@ -203,6 +204,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
         isDeleted: false,
         hasUploaded: true,
         allowBulkImport: true,
+        isPayProEnabled: true,
       })
     } catch (error) {
       console.error("Save failed:", error);
@@ -761,7 +763,7 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
                           </div>
                         </div>
                       </div>
-                      <div className="d-flex align-items-center justify-content-between">
+                      <div className="d-flex align-items-center justify-content-between mb-3">
                         <div className="status-title">
                           <h5>Status</h5>
                           <p>Change the Status by toggle </p>
@@ -774,6 +776,23 @@ const CampusModal: React.FC<CampusModalProps> = ({ selectedId, onSuccess }) => {
                             checked={campusEdit?.isEnabled}
                             onChange={(e) => handleCampusEditInfoChange('isEnabled', e.target.checked)}
                             id="switch-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="d-flex align-items-center justify-content-between">
+                        <div className="status-title">
+                          <h5>PayPro Enabled</h5>
+                          <p>Enable PayPro integration for this campus</p>
+                        </div>
+                        <div className="form-check form-switch">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            role="switch"
+                            checked={campusEdit?.isPayProEnabled ?? true}
+                            onChange={(e) => handleCampusEditInfoChange('isPayProEnabled', e.target.checked)}
+                            id="switch-paypro-edit"
                           />
                         </div>
                       </div>

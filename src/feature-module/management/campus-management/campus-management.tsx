@@ -39,6 +39,9 @@ interface Campus {
   addedBy: string;
   isEnabled: boolean;
   isDeleted: boolean;
+  hasUploaded?: boolean;
+  allowBulkImport?: boolean;
+  isPayProEnabled?: boolean;
 }
 
 const CampusList = () => {
@@ -211,6 +214,25 @@ const CampusList = () => {
         </>
       ),
       sorter: (a: TableData, b: TableData) => a.status.length - b.status.length,
+    },
+    {
+      title: "PayPro Status",
+      dataIndex: "isPayProEnabled",
+      render: (text: boolean) => (
+        <>
+          {text === true ? (
+            <span className="badge badge-soft-success d-inline-flex align-items-center">
+              <i className="ti ti-circle-filled fs-5 me-1"></i>
+              Enabled
+            </span>
+          ) : (
+            <span className="badge badge-soft-danger d-inline-flex align-items-center">
+              <i className="ti ti-circle-filled fs-5 me-1"></i>
+              Disabled
+            </span>
+          )}
+        </>
+      ),
     },
     ...(hasPermission?.deleteRight || hasPermission?.editRight
       ? [

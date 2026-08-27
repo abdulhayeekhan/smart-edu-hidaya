@@ -1,52 +1,13 @@
-import React, { ChangeEvent, useEffect, FormEvent, useState, useRef, useMemo } from "react";
-import { Link } from "react-router-dom";
-// import { feeGroup, feesTypes, paymentType } from '../../../core/common/selectoption/selectoption'
-import { DatePicker } from "antd";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import dayjs from "dayjs";
-import { all_routes } from "../../router/all_routes";
-import {
-    AdmissionNo,
-    Hostel,
-    PickupPoint,
-    VehicleNumber,
-    academicYear,
-    allClass,
-    allSection,
-    bloodGroup,
-    cast,
-    gender,
-    house,
-    mothertongue,
-    names,
-    religion,
-    rollno,
-    roomNO,
-    route,
-    status,
-    feesStatuses
-} from "../../../core/common/selectoption/selectoption";
-import useRegionsList from "../../../core/common/selectoption/master/useRegions";
-import { useCampusesList } from "../../../core/common/selectoption/master/useCampusesList";
-import { useAcademicGrades } from "../../../core/common/selectoption/academic/useAcademicGrades";
-import { useCities } from "../../../core/common/selectoption/address/useCities";
-import { TagsInput } from "react-tag-input-component";
-import CommonSelect from "../../../core/common/commonSelect";
-import CommonSelect2 from "../../../core/common/commonSelect2"
-import CommonSelect3 from "../../../core/common/commonSelect3"
 import { AppDispatch, RootState } from '../../../store';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from "axios";
-import { useLastAcademicSession } from '../../../core/common/selectoption/academic/useLastAcademicSession';
-import { BulkInvoicePayload, GenerateBulkInvoice, GetFeeInvoices, FeeInvoiceFilter, CancelInvoice, CancelInvoicePayload } from '../../../store/apps/fee-invoice'
-import { useAcademicSessions } from '../../../core/common/selectoption/academic/useAcademicSessions';
-import toast from "react-hot-toast";
-import html2pdf from 'html2pdf.js';
-import Barcode from 'react-barcode';
 import { QRCodeCanvas } from 'qrcode.react';
 import { GetCampusBanksByCampus } from "../../../store/apps/campus-bank";
-import { CompnayIcon, BrandName, PoweredBy, feeTermsConditions } from '../../../environment'
+import { feeTermsConditions } from '../../../environment';
 
-const baseURL = process.env.REACT_APP_API_BASE_URL
+const baseURL = process.env.REACT_APP_API_BASE_URL;
 
 interface VoucherDetail {
     feeName: string;
@@ -66,15 +27,22 @@ interface StudentItem {
     fatherName: string;
     studentNumber: string;
     grade: string;
+    address?: string;
+    contactNumber?: string;
+    email?: string;
+    ntn?: string;
     invoiceDate: string | Date;
     dueDate: string | Date;
     totalDiscount: number;
     netAmount: number;
+    totalPayable?: number;
     amountReceived?: number;
+    lateFee?: number;
+    isPayProEnabled?: boolean;
+    isPayproEnabled?: boolean;
     details: VoucherDetail[];
 }
 
-// 1. Updated Props to expect a single item instead of a list
 interface Props {
     data: StudentItem;
 }
@@ -83,12 +51,23 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
     const contentRef = useRef<HTMLDivElement>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { data: bankDetails } = useSelector((state: RootState) => state.campusBank);
+    const [campusApiInfo, setCampusApiInfo] = useState<any>(null);
+
     useEffect(() => {
-        const campusId = data?.campusId;// Debug log to check extracted campusId
+        const campusId = data?.campusId;
         if (campusId) {
             dispatch(GetCampusBanksByCampus(campusId));
+            axios.get(`${baseURL}/api/campus/getcampusbyid?id=${campusId}`)
+                .then(res => {
+                    if (res.data?.data) {
+                        setCampusApiInfo(res.data.data);
+                    }
+                })
+                .catch(err => {
+                    console.error("Error fetching campus info from API:", err);
+                });
         }
-    }, [data, dispatch]);
+    }, [data?.campusId, dispatch]);
 
     const [deposit, setDeposit] = useState<any>(null);
     useEffect(() => {
@@ -107,50 +86,107 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
         fetchDeposit();
     }, [data?.admissionId]);
 
-    // 3. Transform single data item
     const voucher = useMemo(() => {
         if (!data) return null;
         const details = data.details ? [...data.details] : [];
-        let netAmount = data.netAmount;
 
-        if (deposit && deposit.amount > 0 && deposit.depositedAt === null) {
-            const exists = details.find(d => d.feeName === "Security");
-            if (!exists) {
+        let netAmount = data.totalPayable || data.netAmount || 0;
+        if (deposit && deposit.amount > 0) {
+            const index = details.findIndex((d) => d.feeName?.toLowerCase().includes("security deposit"));
+            if (index !== -1) {
+                details[index] = {
+                    ...details[index],
+                    remainingAmount: deposit.amount
+                };
+            } else {
                 details.push({
-                    feeName: "Security",
+                    feeName: "Security Deposit",
                     remainingAmount: deposit.amount
                 });
                 netAmount += deposit.amount;
             }
         }
 
+        const invoiceNumber = data.invoiceNumber !== undefined && data.invoiceNumber !== null ? data.invoiceNumber.toString() : ((data as any).voucherNo?.toString() || data.id?.toString() || "");
+        const payproId = (data as any).payproId || (data as any).payProId || (data as any).orderNumber || invoiceNumber;
+        const click2Pay = (data as any).click2Pay || (data as any).paymentUrl || "";
+        const serialNo = invoiceNumber;
+        const voucherNo = invoiceNumber;
+        const oneBillId = payproId;
+        const issueDate = data.invoiceDate ? dayjs(data.invoiceDate).format("MMM DD, YYYY") : "";
+        const dueDate = data.dueDate ? dayjs(data.dueDate).format("MMM DD, YYYY") : "";
+        const validityDate = data.dueDate ? dayjs(data.dueDate).add(5, 'day').format("MMM DD, YYYY") : "";
+
+        const ubl = bankDetails?.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('ubl'))?.iban
+            || bankDetails[0]?.iban || "";
+        const abl = bankDetails?.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('abl'))?.iban
+            || bankDetails[1]?.iban || "";
+        const mcb = bankDetails?.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('mcb'))?.iban
+            || bankDetails[2]?.iban || "";
+
+        const bankAccounts = bankDetails?.map((b: any) => {
+            const bankName = b.tblAccountBank?.name || b.bankName || "Bank";
+            const title = b.accountTitle ? ` (${b.accountTitle})` : "";
+            const iban = b.iban || b.accountNo || b.accountNumber || "";
+            return {
+                label: `${bankName}${title}:`,
+                value: iban
+            };
+        }) || [];
+
+        const isPayProEnabled = campusApiInfo?.isPayProEnabled !== undefined
+            ? Boolean(campusApiInfo.isPayProEnabled)
+            : data.isPayProEnabled !== undefined
+                ? Boolean(data.isPayProEnabled)
+                : (data as any).isPayproEnabled !== undefined
+                    ? Boolean((data as any).isPayproEnabled)
+                    : true;
+
+        const campusAddress = campusApiInfo?.address || (data as any).campusAddress || (data as any).tblCampus?.address || (data as any).campusDetails?.address || "";
+        const campusContact = campusApiInfo?.contactNumber || campusApiInfo?.contactNo || (data as any).campusContactNumber || (data as any).campusContact || (data as any).campusPhone || (data as any).tblCampus?.contactNumber || "";
+        const campusEmail = campusApiInfo?.email || (data as any).campusEmail || (data as any).tblCampus?.email || "";
+        const ntn = campusApiInfo?.ntn || data.ntn || (data as any).campusNTN || "";
+
+        const rawStudentImage = (data as any).imageUrl || (data as any).image || (data as any).photo || (data as any).studentImage || (data as any).profileImage || (data as any).studentPhoto || "";
+        const normalizedStudentImage = rawStudentImage ? rawStudentImage.replace(/\\/g, '/') : "";
+        const studentImage = normalizedStudentImage ? (normalizedStudentImage.startsWith('http') ? normalizedStudentImage : `${baseURL}/${normalizedStudentImage}`) : "/assets/img/students/student-01.jpg";
+
         return {
             id: data.id,
-            school: BrandName,
-            campus: data.campusName?.toUpperCase() || "CENTRAL CAMPUS",
-            voucherNo: data.invoiceNumber?.toString(),
-            studentName: `${data.firstName} ${data.lastName}`.toUpperCase(),
-            studentImage: data.imageUrl
-                ? (data.imageUrl.startsWith('http')
-                    ? data.imageUrl
-                    : `${baseURL}/${data.imageUrl.replace(/^\//, '')}`)
-                : "/assets/img/students/student-01.jpg",
-            fatherName: data.fatherName?.toUpperCase(),
-            regNo: data.studentNumber,
-            grade: data.grade,
-            month: dayjs(data.invoiceDate).format("MMM-YYYY"),
-            dueDate: dayjs(data.dueDate).format("YYYY-MM-DD"),
-            validityDate: dayjs(data.dueDate).add(5, 'day').format("YYYY-MM-DD"),
-            bankName: bankDetails[0]?.tblAccountBank?.name || "N/A",
-            accTitle: bankDetails[0]?.accountTitle || "N/A",
-            iban: bankDetails[0]?.iban || "N/A",
-            discount: data.totalDiscount,
+            campus: (campusApiInfo?.name || data.campusName)?.toUpperCase() || "",
+            ntn: ntn,
+            campusAddress: campusAddress,
+            campusContact: campusContact,
+            campusEmail: campusEmail,
+            studentImage: studentImage,
+            studentName: `${data.firstName || ''} ${data.lastName || ''}`.trim().toUpperCase(),
+            regNo: data.studentNumber || (data.id ? String(data.id) : ""),
+            grade: data.grade || "",
+            fatherName: data.fatherName?.toUpperCase() || "",
+            address: data.address || "",
+            contact: data.contactNumber || (data as any).phone || (data as any).mobileNumber || "",
+            email: data.email || "",
+            serialNo: serialNo,
+            voucherNo: voucherNo,
+            oneBillId: oneBillId,
+            payproId: payproId,
+            click2Pay: click2Pay,
+            issueDate: issueDate,
+            dueDate: dueDate,
+            validityDate: validityDate,
+            feePeriod: data.invoiceDate ? `${dayjs(data.invoiceDate).format("MMM YYYY")} - ${dayjs(data.invoiceDate).format("MMM YYYY")}` : "",
             totalPayable: netAmount - (data.amountReceived || 0),
-            details: details
+            payableByDueDate: netAmount - (data.amountReceived || 0),
+            payableAfterDueDate: (netAmount - (data.amountReceived || 0)) + (data.lateFee || 0),
+            ublAccount: ubl,
+            ablAccount: abl,
+            mcbAccount: mcb,
+            bankAccounts: bankAccounts,
+            details: details,
+            isPayProEnabled: isPayProEnabled
         };
     }, [data, deposit, bankDetails]);
 
-    // 2. Simple check for existence of data
     if (!data || !voucher) {
         return (
             <div style={{ padding: '20px', textAlign: 'center', color: '#000' }}>
@@ -159,192 +195,39 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
         );
     }
 
-
     const handlePrint = () => {
         window.print();
     };
-
-    // 4. VoucherSection component remains the same
-    const VoucherSection: React.FC<{ title: string; data: any }> = ({ title, data }) => (
-        <div style={{
-            width: '33.333%',
-            padding: '8mm 6mm',
-            borderRight: title !== 'PARENT COPY' ? '1px dashed #000' : 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            boxSizing: 'border-box',
-            fontSize: '10.5px',
-            backgroundColor: '#fff',
-            WebkitPrintColorAdjust: 'exact',
-            color: '#000',
-            fontFamily: "'Inter', sans-serif",
-            letterSpacing: '-0.01em'
-        }}>
-            {/* Header Section with Logo */}
-            <div style={{ marginBottom: '8px' }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    marginBottom: '4px'
-                }}>
-                    <img
-                        src={`/${CompnayIcon}`}
-                        alt="Logo"
-                        style={{
-                            width: '40px',
-                            height: '60px',
-                            objectFit: 'contain'
-                        }}
-                    />
-
-                    <div style={{ textAlign: 'center' }}>
-                        <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                            {BrandName}
-                        </h2>
-                        <p style={{ margin: 0, fontSize: '12px', fontWeight: 500 }}>{data.campus}</p>
-                    </div>
-                </div>
-
-                {/* Curved Title Box */}
-                <div style={{
-                    border: '2px solid #000',
-                    padding: '4px',
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                    fontSize: '11px',
-                    borderRadius: '6px'
-                }}>
-                    {title}
-                </div>
-            </div>
-
-            {/* Barcode */}
-            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                <Barcode renderer="svg" value={data.voucherNo} width={0.8} height={25} fontSize={10} margin={0} lineColor="#000" />
-            </div>
-
-            {/* Student Details Row */}
-            <div style={{ display: 'flex', marginBottom: '10px', gap: '10px', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1, lineHeight: '1.5' }}>
-                    <strong>Voucher No:</strong> {data.voucherNo} <br />
-                    <strong>Student:</strong> <span style={{ fontWeight: 700, fontSize: '11px' }}>{data.studentName}</span> <br />
-                    <strong>Father:</strong> {data.fatherName} <br />
-                    <strong>Reg #:</strong> {data.regNo} <br />
-                    <strong>Grade:</strong> {data.grade} <br />
-                    <strong>Month:</strong> {data.month}
-                </div>
-
-                <div style={{ border: '1.5px solid #000', padding: '1px', borderRadius: '4px', overflow: 'hidden' }}>
-                    <img src={data.studentImage} alt="Profile" style={{ width: '55px', height: '60px', objectFit: 'cover', display: 'block' }} />
-                </div>
-            </div>
-
-            {/* Fee Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', color: '#000' }}>
-                <thead>
-                    <tr style={{ borderBottom: '2.5px solid #000' }}>
-                        <th align="left" style={{ padding: '4px 0', fontWeight: 700, fontSize: '9px', textTransform: 'uppercase' }}>Description</th>
-                        <th align="right" style={{ padding: '4px 0', fontWeight: 700, fontSize: '9px', textTransform: 'uppercase' }}>Amount</th>
-                    </tr>
-                </thead>
-                <tbody style={{ fontWeight: 500 }}>
-                    {data?.details?.map((detail: VoucherDetail, index: number) => (
-                        <tr key={index}>
-                            <td style={{ padding: '3px 0', borderBottom: '1px solid #eee' }}><b>{detail.feeName}</b>  {detail?.invoiceMonth ? `(${dayjs(detail.invoiceMonth).format("MMM-YYYY")})` : ""}</td>
-                            <td align="right" style={{ padding: '3px 0', borderBottom: '1px solid #eee' }}>{detail.remainingAmount}</td>
-                        </tr>
-                    ))}
-                    {/* Discount Row */}
-                    <tr>
-                        <td style={{ padding: '4px 0', borderBottom: '1px solid #ddd' }}><strong>Discount</strong></td>
-                        <td align="right" style={{ padding: '4px 0', borderBottom: '1px solid #ddd' }}><strong>({data?.discount})</strong></td>
-                    </tr>
-                    {/* Total Payable Row */}
-                    <tr style={{ fontSize: '13px' }}>
-                        <td style={{ padding: '6px 0' }}><strong>Amount payable:</strong></td>
-                        <td align="right" style={{ padding: '6px 0' }}><strong style={{ fontSize: '14px' }}>{data?.totalPayable}</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            {/* Curved Due Date Box */}
-            <div style={{
-                border: '2px solid #000',
-                padding: '8px',
-                marginBottom: '10px',
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9',
-                borderRadius: '8px'
-            }}>
-                <div style={{ fontSize: '13px', fontWeight: 800 }}>DUE DATE: {data.dueDate}</div>
-                <div style={{ fontSize: '11px', fontWeight: 600 }}>VALID FOR BANK: {data.validityDate}</div>
-            </div>
-
-            {bankDetails?.length > 0 && (
-                <div style={{
-                    fontSize: '9px',
-                    border: '1.5px solid #000',
-                    padding: '8px',
-                    marginBottom: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderRadius: '8px'
-                }}>
-                    <div style={{ lineHeight: '1.6' }}>
-                        <strong style={{ fontSize: '10px', textTransform: 'uppercase' }}>Bank Details</strong><br />
-                        Bank: {data.bankName}<br />
-                        Title: {data.accTitle}<br />
-                        IBAN: <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '10px' }}>{data.iban}</span>
-                    </div>
-                    <QRCodeCanvas value={`${data.iban}`} size={50} level="H" fgColor="#000" />
-                </div>
-            )}
-            {/* Fee Instructions */}
-            <div style={{ fontSize: '7.8px', lineHeight: '1.3', fontWeight: 500, whiteSpace: 'pre-line' }}>
-                {feeTermsConditions}
-            </div>
-
-            {/* Footer */}
-            <div style={{ marginTop: 'auto', textAlign: 'center', fontSize: '9px', borderTop: '1px solid #000', paddingTop: '5px', fontWeight: 600 }}>
-                Powered by <span style={{ fontWeight: 800 }}>{PoweredBy}</span>
-            </div>
-        </div>
-    );
 
     return (
         <div className="print-container" style={{ padding: '20px', backgroundColor: '#525659', minHeight: '100vh' }}>
             <style>{`
         @media screen {
-          .voucher-page {
+          .invoice-page-container {
             background: white;
-            display: flex;
+            width: 210mm;
+            min-height: 297mm;
             margin: 20px auto;
+            padding: 12mm 15mm;
             box-shadow: 0 0 20px rgba(0,0,0,0.4);
-            width: 297mm;
-            height: 210mm;
-            overflow: hidden;
+            box-sizing: border-box;
+            font-family: 'Inter', Arial, sans-serif;
+            color: #000;
           }
         }
 
         @media print {
           @page {
-            size: landscape;
-            margin: 0 !important; /* Force no margin */
+            size: A4 portrait;
+            margin: 8mm 10mm;
           }
 
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            height: 100%;
-            overflow: hidden; /* Prevent scrolling */
+            background: white !important;
           }
           
-          /* Remove background color and padding from the container */
           .print-container {
             padding: 0 !important;
             background: white !important;
@@ -362,20 +245,15 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            width: 297mm !important;
-            height: 210mm !important;
+            width: 100% !important;
           }
 
-          .voucher-page {
-            width: 297mm !important;
-            height: 210mm !important; /* Match A4 Landscape */
-            display: flex !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          .invoice-page-container {
+            width: 100% !important;
             box-shadow: none !important;
             border: none !important;
-            overflow: hidden !important;
-            page-break-after: avoid; /* Force single page */
+            padding: 0 !important;
+            margin: 0 !important;
           }
 
           .no-print {
@@ -394,10 +272,422 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
             </div>
 
             <div id="print-area" ref={contentRef}>
-                <div key={voucher.id} className="voucher-page">
-                    <VoucherSection title="BANK COPY" data={voucher} />
-                    <VoucherSection title="SCHOOL COPY" data={voucher} />
-                    <VoucherSection title="PARENT COPY" data={voucher} />
+                <div key={voucher.id} className="invoice-page-container">
+                    
+                    {/* TOP SECTION: PARENT COPY */}
+                    <div style={{ borderBottom: '2px dashed #444', paddingBottom: '16px', marginBottom: '16px' }}>
+                        {/* Header: Campus & NTN & Contact Info */}
+                        <div style={{ marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: '#000' }}>
+                                {voucher.campus}
+                            </h3>
+                            {voucher.ntn && (
+                                <div style={{ fontWeight: 700, fontSize: '11px', color: '#000' }}>
+                                    NTN {voucher.ntn}
+                                </div>
+                            )}
+                            {voucher.campusAddress && (
+                                <div style={{ fontSize: '10px', color: '#222', marginTop: '1px', fontWeight: 600 }}>
+                                    Address: {voucher.campusAddress}
+                                </div>
+                            )}
+                            {(voucher.campusContact || voucher.campusEmail) && (
+                                <div style={{ fontSize: '10px', color: '#222', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '1px', fontWeight: 600 }}>
+                                    {voucher.campusContact && <span>Contact: {voucher.campusContact}</span>}
+                                    {voucher.campusEmail && <span>Email: {voucher.campusEmail}</span>}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                            {/* Left Box (Student Info, Challan Info, Charges Table) */}
+                            <div style={{ flex: 1 }}>
+                                
+                                {/* Student Information Table with Photo */}
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch', marginBottom: '3px' }}>
+                                    <table style={{ flex: 1, borderCollapse: 'collapse', border: '1px solid #000', fontSize: '10.5px' }}>
+                                        <tbody>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600, width: '120px' }}>Student Name:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 700 }}>{voucher.studentName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Student ID:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.regNo}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Class:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.grade}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Parent Name:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.fatherName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Address:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.address}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Contact:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.contact}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Email:</td>
+                                                <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.email}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    {/* Student Photo */}
+                                    <div style={{ width: '68px', border: '1px solid #000', borderRadius: '4px', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
+                                        <img 
+                                            src={voucher.studentImage} 
+                                            alt={voucher.studentName}
+                                            onError={(e: any) => { e.target.src = "/assets/img/students/student-01.jpg"; }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: '9px', fontStyle: 'italic', marginBottom: '8px', color: '#444' }}>
+                                    If the above information is incorrect please update using the Parent app
+                                </div>
+
+                                {/* Challan Information Table */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '10.5px', marginBottom: '8px' }}>
+                                    <tbody>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600, width: '160px' }}>Voucher Number:</td>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 700 }}>{voucher.serialNo}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>
+                                                {voucher.isPayProEnabled ? "For PayPro / 1-Bill Payment" : "For 1-Bill Payment"}
+                                            </td>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 700 }}>{voucher.oneBillId}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Issue Date:</td>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.issueDate}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Due Date:</td>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.dueDate}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000', fontWeight: 600 }}>Validity Date:</td>
+                                            <td style={{ padding: '3px 6px', border: '1px solid #000' }}>{voucher.validityDate}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                {/* Fee Charges Breakdown Table */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '10.5px' }}>
+                                    <thead>
+                                        <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '1px solid #000' }}>
+                                            <th colSpan={2} style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 700 }}>
+                                                Fee Period {voucher.feePeriod}
+                                            </th>
+                                        </tr>
+                                        <tr style={{ borderBottom: '1px solid #000' }}>
+                                            <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 700 }}>Charges</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700, width: '100px' }}>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {voucher.details?.map((item: any, idx: number) => (
+                                            <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '3px 6px' }}>{item.feeName}</td>
+                                                <td style={{ padding: '3px 6px', textAlign: 'right' }}>{item.remainingAmount?.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                        {Array.from({ length: Math.max(0, 2 - (voucher.details?.length || 0)) }).map((_, i) => (
+                                            <tr key={`empty-${i}`} style={{ height: '18px', borderBottom: '1px solid #eee' }}>
+                                                <td style={{ padding: '3px 6px' }}>&nbsp;</td>
+                                                <td style={{ padding: '3px 6px' }}>&nbsp;</td>
+                                            </tr>
+                                        ))}
+                                        <tr style={{ borderTop: '1px solid #000', fontWeight: 700 }}>
+                                            <td style={{ padding: '4px 6px' }}>Total Payable</td>
+                                            <td style={{ padding: '4px 6px', textAlign: 'right' }}>{voucher.totalPayable?.toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '4px 6px', fontWeight: 600 }}>Payable by '{voucher.dueDate}'</td>
+                                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700 }}>{voucher.payableByDueDate?.toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '4px 6px', fontWeight: 600 }}>Payable after due date</td>
+                                            <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 700 }}>{voucher.payableAfterDueDate?.toLocaleString()}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Right Box (Mobile Application QR & Notes) */}
+                            <div style={{ width: '310px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                
+                                {/* Mobile Application Promo Section */}
+                                <div style={{ border: '1px solid #000', padding: '8px', borderRadius: '4px', textAlign: 'center', backgroundColor: '#fafafa' }}>
+                                    
+                                    {/* Mobile App Promo Banner Image */}
+                                    <div style={{ marginBottom: '8px' }}>
+                                        <img 
+                                            src="/assets/img/mobile-app-promo.jpg" 
+                                            alt="Get Yours Now - Track child development" 
+                                            style={{ width: '100%', height: 'auto', maxHeight: '180px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #ccc', display: 'block', margin: '0 auto' }} 
+                                        />
+                                    </div>
+
+                                    {/* QR Codes Under Image (Uncomment when application is published) */}
+                                    {/* <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '6px' }}>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ border: '1px solid #ccc', padding: '3px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                <QRCodeCanvas value="https://smartedu.app/ios" size={42} fgColor="#333" />
+                                            </div>
+                                            <div style={{ fontSize: '9px', fontWeight: 700, marginTop: '2px' }}>IOS</div>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ border: '1px solid #ccc', padding: '3px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                <QRCodeCanvas value="https://smartedu.app/android" size={42} fgColor="#333" />
+                                            </div>
+                                            <div style={{ fontSize: '9px', fontWeight: 700, marginTop: '2px' }}>Android</div>
+                                        </div>
+                                    </div> */}
+
+                                    {/* Mobile App Status */}
+                                    <div style={{
+                                        backgroundColor: '#fff3cd',
+                                        border: '1px solid #ffeeba',
+                                        color: '#856404',
+                                        fontWeight: 800,
+                                        fontSize: '9.5px',
+                                        padding: '3px 8px',
+                                        borderRadius: '3px',
+                                        display: 'inline-block',
+                                        margin: '2px 0'
+                                    }}>
+                                        Mobile Application Coming Soon!
+                                    </div>
+                                </div>
+
+                                {/* Payment Note Box */}
+                                <div style={{ border: '1px solid #000', padding: '6px 8px', borderRadius: '4px', fontSize: '9.5px', lineHeight: '1.4' }}>
+                                    <div style={{ fontWeight: 800, marginBottom: '2px' }}>Note:</div>
+                                    {voucher.isPayProEnabled ? (
+                                        <div style={{ fontWeight: 700, fontSize: '10.5px', color: '#000' }}>
+                                            Pay through PayPro
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            Please pay via 1-Bill (available through all banks), at UBL/ABL/MCB branches, online billing portal, or school POS terminals. Use approved channels for timely processing.
+                                        </div>
+                                    )}
+                                </div>
+
+                                 {/* Payment QR Codes (PayPro QR & Payment Link QR) */}
+                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '16px', margin: '4px 0 6px 0' }}>
+                                     {/* PayPro QR Code */}
+                                     {(voucher.payproId || voucher.oneBillId) && (
+                                         <div style={{ textAlign: 'center' }}>
+                                             <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                 <QRCodeCanvas value={voucher.payproId || voucher.oneBillId} size={58} fgColor="#000" />
+                                             </div>
+                                             <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                 PayPro ID: {voucher.payproId || voucher.oneBillId}
+                                             </div>
+                                         </div>
+                                     )}
+
+                                     {/* Click2Pay Payment Link QR Code */}
+                                     {voucher.click2Pay && (
+                                         <div style={{ textAlign: 'center' }}>
+                                             <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                 <QRCodeCanvas value={voucher.click2Pay} size={58} fgColor="#000" />
+                                             </div>
+                                             <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                 Payment Link QR
+                                             </div>
+                                         </div>
+                                     )}
+                                 </div>
+
+                                {/* Important Instructions Box (Set under PayPro QR code) */}
+                                <div style={{ border: '1px solid #000', padding: '6px 8px', borderRadius: '4px', fontSize: '8px', lineHeight: '1.3', backgroundColor: '#fff' }}>
+                                    <div style={{ fontWeight: 800, fontSize: '8.5px', marginBottom: '3px', textTransform: 'uppercase', color: '#111' }}>
+                                        Important Instructions:
+                                    </div>
+                                    <ol style={{ margin: 0, paddingLeft: '12px', color: '#222' }}>
+                                        {feeTermsConditions.map((instruction, idx) => (
+                                            <li key={idx} style={{ marginBottom: '1.5px' }}>{instruction}</li>
+                                        ))}
+                                    </ol>
+                                </div>
+
+                                {/* Parent Copy Label */}
+                                <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'capitalize' }}>
+                                        Parent Copy
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BOTTOM SECTION: BANK COPY */}
+                    <div style={{ paddingTop: '8px' }}>
+                        {/* Header */}
+                        <div style={{ marginBottom: '8px' }}>
+                            <h4 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#000' }}>
+                                {voucher.campus}
+                            </h4>
+                            {voucher.ntn && (
+                                <div style={{ fontWeight: 700, fontSize: '11px', color: '#000' }}>
+                                    NTN {voucher.ntn}
+                                </div>
+                            )}
+                            {voucher.campusAddress && (
+                                <div style={{ fontSize: '9.5px', color: '#222', marginTop: '1px', fontWeight: 600 }}>
+                                    Address: {voucher.campusAddress}
+                                </div>
+                            )}
+                            {(voucher.campusContact || voucher.campusEmail) && (
+                                <div style={{ fontSize: '9.5px', color: '#222', display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '1px', fontWeight: 600 }}>
+                                    {voucher.campusContact && <span>Contact: {voucher.campusContact}</span>}
+                                    {voucher.campusEmail && <span>Email: {voucher.campusEmail}</span>}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            {/* Left Box (Student & Challan Info) */}
+                            <div style={{ flex: 1 }}>
+                                {/* Student Information Table with Photo */}
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                                    <table style={{ flex: 1, borderCollapse: 'collapse', border: '1px solid #000', fontSize: '10px' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '1px solid #000' }}>
+                                                <th colSpan={2} style={{ padding: '3px 6px', textAlign: 'left', fontWeight: 700 }}>
+                                                    Student Information
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', width: '120px', fontWeight: 600 }}>Student Name:</td>
+                                                <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 700 }}>{voucher.studentName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '3px 6px', borderBottom: '1px solid #000', fontWeight: 600 }}>Student ID:</td>
+                                                <td style={{ padding: '3px 6px', borderBottom: '1px solid #000' }}>{voucher.regNo}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    {/* Student Photo */}
+                                    <div style={{ width: '50px', border: '1px solid #000', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9f9f9', flexShrink: 0 }}>
+                                        <img 
+                                            src={voucher.studentImage} 
+                                            alt={voucher.studentName}
+                                            onError={(e: any) => { e.target.src = "/assets/img/students/student-01.jpg"; }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    </div>
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '10px' }}>
+                                    <tbody>
+                                        <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '1px solid #000' }}>
+                                            <th colSpan={2} style={{ padding: '3px 6px', textAlign: 'left', fontWeight: 700 }}>
+                                                Challan Information
+                                            </th>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>Voucher Number:</td>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 700 }}>{voucher.serialNo}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>Due Date:</td>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc' }}>{voucher.dueDate}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', fontWeight: 600 }}>Validity Date:</td>
+                                            <td style={{ padding: '3px 6px' }}>{voucher.validityDate}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Right Box (Payment Details & Bank Accounts) */}
+                            <div style={{ flex: 1 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '10px' }}>
+                                    <thead>
+                                        <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '1px solid #000' }}>
+                                            <th colSpan={2} style={{ padding: '3px 6px', textAlign: 'left', fontWeight: 700 }}>
+                                                Fee Period {voucher.feePeriod}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>Payable by '{voucher.dueDate}'</td>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', textAlign: 'right', fontWeight: 700 }}>{voucher.payableByDueDate?.toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #000', fontWeight: 600 }}>Payable after due date</td>
+                                            <td style={{ padding: '3px 6px', borderBottom: '1px solid #000', textAlign: 'right', fontWeight: 700 }}>{voucher.payableAfterDueDate?.toLocaleString()}</td>
+                                        </tr>
+                                        {voucher.bankAccounts && voucher.bankAccounts.length > 0 ? (
+                                            voucher.bankAccounts.map((b: any, idx: number) => (
+                                                <tr key={idx}>
+                                                    <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>{b.label}</td>
+                                                    <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{b.value}</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <>
+                                                {voucher.ublAccount && (
+                                                    <tr>
+                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>UBL Account:</td>
+                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{voucher.ublAccount}</td>
+                                                    </tr>
+                                                )}
+                                                {voucher.ablAccount && (
+                                                    <tr>
+                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>ABL Account:</td>
+                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{voucher.ablAccount}</td>
+                                                    </tr>
+                                                )}
+                                                {voucher.mcbAccount && (
+                                                    <tr>
+                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontWeight: 600 }}>MCB Account:</td>
+                                                        <td style={{ padding: '3px 6px', borderBottom: '1px solid #ccc', fontFamily: 'monospace', fontWeight: 600 }}>{voucher.mcbAccount}</td>
+                                                    </tr>
+                                                )}
+                                            </>
+                                        )}
+                                        <tr>
+                                            <td style={{ padding: '3px 6px', fontWeight: 600 }}>
+                                                {voucher.isPayProEnabled ? "For PayPro / 1-Bill Payment" : "For 1-Bill Payment"}
+                                            </td>
+                                            <td style={{ padding: '3px 6px', fontFamily: 'monospace', fontWeight: 700 }}>{voucher.oneBillId}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', fontSize: '9.5px', color: '#222' }}>
+                            <div style={{ fontWeight: 600 }}>
+                                {voucher.isPayProEnabled
+                                    ? "For Payments: Pay through PayPro (Fee will not be accepted without PayPro application)"
+                                    : "For Payments: use Voucher Number"
+                                }
+                            </div>
+                            <div>{dayjs().format("DD/MM/YYYY hh:mm:ss A")}</div>
+                            <div style={{ fontWeight: 800, fontSize: '11px' }}>Bank Copy</div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -405,3 +695,4 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
 };
 
 export default SingleFeeVoucher;
+
