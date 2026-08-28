@@ -54,28 +54,117 @@ const ClassSection = () => {
         toast.error(err || "Failed to delete session");
       });
   };
-  const [campusId, setCampusId] = useState(loginInfo?.userLevel === 3 ? loginInfo?.userLevelId : 0)
+  const [campusId, setCampusId] = useState(loginInfo?.userLevel === 3 ? loginInfo?.userLevelId : 0);
+
+  const indexToLetter = (num: number): string => {
+    let letter = "";
+    let n = num;
+    while (n > 0) {
+      const mod = (n - 1) % 26;
+      letter = String.fromCharCode(65 + mod) + letter;
+      n = Math.floor((n - mod) / 26);
+    }
+    return letter || "A";
+  };
+
+  const letterToIndex = (str: string): number => {
+    const clean = (str || "").replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (!clean) return 0;
+    let num = 0;
+    for (let i = 0; i < clean.length; i++) {
+      num = num * 26 + (clean.charCodeAt(i) - 64);
+    }
+    return num;
+  };
+
+  const getAutoSectionInfo = (targetCampusId: number) => {
+    const campusSections = (data || []).filter((s: any) =>
+      targetCampusId === 0 || Number(s.campusId) === Number(targetCampusId)
+    );
+
+    let maxLetterIdx = 0;
+    let maxSort = 0;
+
+    campusSections.forEach((sec: any) => {
+      const sortNum = Number(sec.sortOrder) || 0;
+      if (sortNum > maxSort) maxSort = sortNum;
+
+      const rawName = (sec.name || "").trim();
+      if (rawName) {
+        const match = rawName.match(/([A-Za-z]+)$/);
+        const letterStr = match ? match[1] : rawName;
+        const idx = letterToIndex(letterStr);
+        if (idx > maxLetterIdx) maxLetterIdx = idx;
+      }
+    });
+
+    const nextLetter = indexToLetter(maxLetterIdx + 1);
+    const nextSortOrder = maxSort + 1;
+
+    return {
+      name: nextLetter,
+      displayName: nextLetter,
+      sortOrder: nextSortOrder
+    };
+  };
+
   const [sectionInfo, setSectionInfo] = useState<SectionType>({
     name: "",
     campusId: loginInfo?.userLevel === 3 ? loginInfo?.userLevelId : 0,
     displayName: "",
     sortOrder: 0
-  })
+  });
+
+  const initAddSectionModal = (targetCampId?: number) => {
+    const activeCampus = targetCampId !== undefined ? targetCampId : campusId;
+    const auto = getAutoSectionInfo(activeCampus);
+    setSectionInfo({
+      campusId: activeCampus,
+      name: auto.name,
+      displayName: auto.displayName,
+      sortOrder: auto.sortOrder
+    });
+  };
+
+  useEffect(() => {
+    if (data) {
+      const auto = getAutoSectionInfo(campusId);
+      setSectionInfo((prev) => ({
+        ...prev,
+        campusId: campusId,
+        name: prev.name ? prev.name : auto.name,
+        displayName: prev.displayName ? prev.displayName : auto.displayName,
+        sortOrder: prev.sortOrder ? prev.sortOrder : auto.sortOrder,
+      }));
+    }
+  }, [data, campusId]);
 
   const handleChange = (field: keyof SectionType, value: any) => {
     if (field === 'campusId') {
-      setCampusId(Number(value))
+      const newCampId = Number(value);
+      setCampusId(newCampId);
+      const auto = getAutoSectionInfo(newCampId);
+      setSectionInfo({
+        campusId: newCampId,
+        name: auto.name,
+        displayName: auto.displayName,
+        sortOrder: auto.sortOrder,
+      });
+      return;
     }
 
-    setSectionInfo((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  }
+    setSectionInfo((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'name' && (prev.displayName === prev.name || !prev.displayName)) {
+        updated.displayName = value;
+      }
+      return updated;
+    });
+  };
 
-  const [isSave, setIsSave] = useState(false)
+  const [isSave, setIsSave] = useState(false);
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     setIsSave(true);
     // ---- VALIDATION ----
     if (!sectionInfo.name.trim()) {
@@ -94,19 +183,11 @@ const ClassSection = () => {
     await dispatch(AddSection(sectionInfo))
       .unwrap()
       .then(() => {
-        // Reset input
-        setSectionInfo({
-          name: "",
-          campusId: 0,
-          displayName: "",
-          sortOrder: 0
-        })
-
-        // Close modal AFTER success
         closeBtnRef.current?.click();
+        handleClose();
       })
       .catch((err) => {
-        toast.error(err || "Failed to add grade");
+        toast.error(err || "Failed to add section");
       })
       .finally(() => {
         setIsSave(false); // always reset loading
@@ -122,12 +203,7 @@ const ClassSection = () => {
   });
 
   const handleClose = () => {
-    setSectionInfo({
-      name: "",
-      campusId: 0,
-      displayName: "",
-      sortOrder: 0
-    })
+    initAddSectionModal(campusId);
     setEditSection({
       id: 0,
       name: "",
@@ -135,7 +211,7 @@ const ClassSection = () => {
       displayName: "",
       sortOrder: 0
     });
-  }
+  };
 
   const handleEditChange = (field: keyof SectionType, value: any) => {
     setEditSection((prev) => ({
@@ -331,6 +407,7 @@ const ClassSection = () => {
                     className="btn btn-primary"
                     data-bs-toggle="modal"
                     data-bs-target="#add_class_section"
+                    onClick={() => initAddSectionModal(campusId)}
                   >
                     <i className="ti ti-square-rounded-plus-filled me-2" />
                     Add Section

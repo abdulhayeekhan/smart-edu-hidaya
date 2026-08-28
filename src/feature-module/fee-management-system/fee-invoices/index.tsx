@@ -31,6 +31,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../store";
 import { Modal, Pagination, Tooltip } from "antd";
 import SingleFeeVoucher from "../single-fee-voucher";
+import html2pdf from 'html2pdf.js';
 
 interface VoucherDetail {
     feeName: string;
@@ -94,7 +95,39 @@ const FeesInvoices = () => {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [status, setStatus] = useState('');
-    const [cancelId, setCancelId] = useState(0)
+    const [cancelId, setCancelId] = useState(0);
+
+    const [downloadingInvoice, setDownloadingInvoice] = useState<any | null>(null);
+    const downloadContainerRef = useRef<HTMLDivElement>(null);
+
+    const handleDownloadInvoicePDF = (record: any) => {
+        setDownloadingInvoice(record);
+    };
+
+    useEffect(() => {
+        if (downloadingInvoice && downloadContainerRef.current) {
+            const timer = setTimeout(() => {
+                const element = downloadContainerRef.current;
+                if (element) {
+                    const opt = {
+                        margin: [4, 4, 4, 4] as [number, number, number, number],
+                        filename: `Fee-Invoice-${downloadingInvoice.invoiceNumber || downloadingInvoice.studentNumber || downloadingInvoice.id}.pdf`,
+                        image: { type: 'jpeg' as const, quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                    };
+                    html2pdf().set(opt).from(element).save().then(() => {
+                        setDownloadingInvoice(null);
+                    }).catch((err: any) => {
+                        console.error("PDF Download error:", err);
+                        setDownloadingInvoice(null);
+                    });
+                }
+            }, 400);
+            return () => clearTimeout(timer);
+        }
+    }, [downloadingInvoice]);
 
     const handleDateChange = (start: string, end: string) => {
         setDateFrom(start);
@@ -320,17 +353,30 @@ const FeesInvoices = () => {
                             </Link>
                             <ul className="dropdown-menu dropdown-menu-right p-3">
                                 {canPrint && (
-                                    <li>
-                                        <Link
-                                            className="dropdown-item rounded-1"
-                                            // target="_blank"
-                                            to={`/fee-management-system/single-fee-print/${record.id}`}
-                                        //onClick={() => showModal(record)}
-                                        >
-                                            <i className="ti ti-printer me-2 text-primary fs-16" />
-                                            Print Invoice
-                                        </Link>
-                                    </li>
+                                    <>
+                                        <li>
+                                            <Link
+                                                className="dropdown-item rounded-1"
+                                                to={`/fee-management-system/single-fee-print/${record.id}`}
+                                            >
+                                                <i className="ti ti-printer me-2 text-primary fs-16" />
+                                                Print Invoice
+                                            </Link>
+                                        </li>
+                                        <li>
+                                            <Link
+                                                className="dropdown-item rounded-1"
+                                                to="#"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleDownloadInvoicePDF(record);
+                                                }}
+                                            >
+                                                <i className="ti ti-file-download me-2 text-success fs-16" />
+                                                Download PDF
+                                            </Link>
+                                        </li>
+                                    </>
                                 )}
 
                                 {canCancel && (
@@ -634,6 +680,15 @@ const FeesInvoices = () => {
                     <SingleFeeVoucher data={selectedInvoice} />
                 )}
             </Modal>
+
+            {/* Hidden Container for Downloading PDF Invoice */}
+            {downloadingInvoice && (
+                <div style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '210mm', opacity: 0, pointerEvents: 'none' }}>
+                    <div ref={downloadContainerRef}>
+                        <SingleFeeVoucher data={downloadingInvoice} hideHeaderButtons={true} />
+                    </div>
+                </div>
+            )}
         </>
     );
 };

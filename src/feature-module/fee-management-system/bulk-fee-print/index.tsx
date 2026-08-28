@@ -483,6 +483,14 @@ function LandscapeFeeVoucher({ datalist }: Props) {
                         ? Boolean(item.isPayproEnabled)
                         : true;
 
+            const bankQrValue = bankAccounts && bankAccounts.length > 0
+                ? bankAccounts.map((b: any) => `${b.label} ${b.value}`).join('\n')
+                : [
+                    ubl ? `UBL Account: ${ubl}` : '',
+                    abl ? `ABL Account: ${abl}` : '',
+                    mcb ? `MCB Account: ${mcb}` : '',
+                  ].filter(Boolean).join('\n') || `Campus: ${(matchedCampus?.name || item.campusName)?.toUpperCase() || ''}\nVoucher: ${serialNo}`;
+
             const campusAddress = matchedCampus?.address || item.campusAddress || item.tblCampus?.address || item.campusDetails?.address || "";
             const campusContact = matchedCampus?.contactNumber || matchedCampus?.contactNo || item.campusContactNumber || item.campusContact || item.campusPhone || item.tblCampus?.contactNumber || "";
             const campusEmail = matchedCampus?.email || item.campusEmail || item.tblCampus?.email || "";
@@ -523,6 +531,7 @@ function LandscapeFeeVoucher({ datalist }: Props) {
                 ablAccount: abl,
                 mcbAccount: mcb,
                 bankAccounts: bankAccounts,
+                bankQrValue: bankQrValue,
                 details: details,
                 isPayProEnabled: isPayProEnabled
             };
@@ -815,50 +824,65 @@ function LandscapeFeeVoucher({ datalist }: Props) {
                                                 Pay through PayPro
                                             </div>
                                         ) : (
-                                            <div>
-                                                Please pay via 1-Bill (available through all banks), at UBL/ABL/MCB branches, online billing portal, or school POS terminals. Use approved channels for timely processing.
+                                            <div style={{ fontWeight: 700, fontSize: '10.5px', color: '#000' }}>
+                                                Bank details are available in the QR code.
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Payment QR Codes (PayPro QR & Payment Link QR) */}
-                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '16px', margin: '4px 0 6px 0' }}>
-                                        {/* PayPro QR Code */}
-                                        {(voucher.payproId || voucher.oneBillId) && (
-                                            <div style={{ textAlign: 'center' }}>
-                                                <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
-                                                    <QRCodeCanvas value={voucher.payproId || voucher.oneBillId} size={58} fgColor="#000" />
-                                                </div>
-                                                <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
-                                                    PayPro ID: {voucher.payproId || voucher.oneBillId}
-                                                </div>
-                                            </div>
-                                        )}
+                                     {/* Payment QR Codes (PayPro QR / Bank Details QR & Payment Link QR) */}
+                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '16px', margin: '4px 0 6px 0' }}>
+                                         {/* PayPro QR Code (if isPayProEnabled) OR Campus Bank Details QR Code (if !isPayProEnabled) */}
+                                         {voucher.isPayProEnabled ? (
+                                             (voucher.payproId || voucher.oneBillId) && (
+                                                 <div style={{ textAlign: 'center' }}>
+                                                     <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                         <QRCodeCanvas value={voucher.payproId || voucher.oneBillId} size={58} fgColor="#000" />
+                                                     </div>
+                                                     <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                         PayPro ID: {voucher.payproId || voucher.oneBillId}
+                                                     </div>
+                                                 </div>
+                                             )
+                                         ) : (
+                                             voucher.bankQrValue && (
+                                                 <div style={{ textAlign: 'center' }}>
+                                                     <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                         <QRCodeCanvas value={voucher.bankQrValue} size={58} fgColor="#000" />
+                                                     </div>
+                                                     <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                         Bank Details
+                                                     </div>
+                                                 </div>
+                                             )
+                                         )}
 
-                                        {/* Click2Pay Payment Link QR Code */}
-                                        {voucher.click2Pay && (
-                                            <div style={{ textAlign: 'center' }}>
-                                                <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
-                                                    <QRCodeCanvas value={voucher.click2Pay} size={58} fgColor="#000" />
-                                                </div>
-                                                <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
-                                                    Payment Link QR
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                         {/* Click2Pay Payment Link QR Code */}
+                                         {voucher.click2Pay && (
+                                             <div style={{ textAlign: 'center' }}>
+                                                 <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                     <QRCodeCanvas value={voucher.click2Pay} size={58} fgColor="#000" />
+                                                 </div>
+                                                 <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                     Payment Link QR
+                                                 </div>
+                                             </div>
+                                         )}
+                                     </div>
 
-                                    {/* Important Instructions Box (Set under PayPro QR code) */}
-                                    <div style={{ border: '1px solid #000', padding: '6px 8px', borderRadius: '4px', fontSize: '8px', lineHeight: '1.3', backgroundColor: '#fff' }}>
-                                        <div style={{ fontWeight: 800, fontSize: '8.5px', marginBottom: '3px', textTransform: 'uppercase', color: '#111' }}>
-                                            Important Instructions:
-                                        </div>
-                                        <ol style={{ margin: 0, paddingLeft: '12px', color: '#222' }}>
-                                            {feeTermsConditions.map((instruction, idx) => (
-                                                <li key={idx} style={{ marginBottom: '1.5px' }}>{instruction}</li>
-                                            ))}
-                                        </ol>
-                                    </div>
+                                     {/* Important Instructions Box (Set under PayPro / Bank Details QR code) */}
+                                     <div style={{ border: '1px solid #000', padding: '6px 8px', borderRadius: '4px', fontSize: '8px', lineHeight: '1.3', backgroundColor: '#fff' }}>
+                                         <div style={{ fontWeight: 800, fontSize: '8.5px', marginBottom: '3px', textTransform: 'uppercase', color: '#111' }}>
+                                             Important Instructions:
+                                         </div>
+                                         <ol style={{ margin: 0, paddingLeft: '12px', color: '#222' }}>
+                                             {feeTermsConditions
+                                                 .filter((instruction) => voucher.isPayProEnabled || !instruction.toLowerCase().includes('paypro'))
+                                                 .map((instruction, idx) => (
+                                                     <li key={idx} style={{ marginBottom: '1.5px' }}>{instruction}</li>
+                                                 ))}
+                                         </ol>
+                                     </div>
 
                                     {/* Parent Copy Label */}
                                     <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end' }}>

@@ -33,16 +33,12 @@ const DiscountTransactionSetting: React.FC = () => {
     const feeTypes = useFeeTypes().slice(1);
     const discountTypes = useDiscountType().slice(1);
     const campusDis4thLevel = useCampusDis4thLevel();
-    console.log('Campus Dis 4th Level Options:', campusDis4thLevel);
-    console.log('Fee Types:', feeTypes);
-    console.log('Discount Types:', discountTypes);
 
     // Redux Selectors
 
     const discountSettingdata = useSelector((state: RootState) => state.discountSettings);
     const discountSettingList: DiscountSetting[] = discountSettingdata.data || [];
 
-    console.log('Discount Settings from Redux:', discountSettingList);
 
     // Local State
     const [updateDisSetting, setUpdateDisSetting] = useState<DiscountSetting[]>([]);
@@ -128,6 +124,19 @@ const DiscountTransactionSetting: React.FC = () => {
                                                             s => s.feeTypeId === Number(fee?.value) && s.discountTypeId === Number(disc.value)
                                                         );
 
+                                                        const updatedItem = updateDisSetting.find(
+                                                            s => s.feeTypeId === Number(fee?.value) && s.discountTypeId === Number(disc.value)
+                                                        );
+                                                        const addedItem = addDisSettings.find(
+                                                            s => s.feeTypeId === Number(fee?.value) && s.discountTypeId === Number(disc.value)
+                                                        );
+
+                                                        const currentValue = updatedItem
+                                                            ? updatedItem.receiptDebitAccount
+                                                            : addedItem
+                                                                ? addedItem.receiptDebitAccount
+                                                                : (existingSetting?.receiptDebitAccount ?? "");
+
                                                         return (
                                                             <tr
                                                                 key={`${fee?.value}-${disc?.value}`}
@@ -137,18 +146,17 @@ const DiscountTransactionSetting: React.FC = () => {
                                                                 <td>
                                                                     <select
                                                                         className="form-select form-select-sm"
-                                                                        value={existingSetting ? existingSetting.receiptDebitAccount : ""}
+                                                                        value={currentValue}
                                                                         onChange={(e) => {
                                                                             const val = e.target.value;
-                                                                            if (!val) return;
+                                                                            const selectedAccountId = val ? Number(val) : 0;
 
-                                                                            // Assuming your handlers work with the raw ID now
                                                                             existingSetting
-                                                                                ? handleRreceiptDebitAccountUpdate(Number(val), Number(fee?.value), Number(disc.value), Number(existingSetting.id))
-                                                                                : handleRreceiptDebitAccountAdd(Number(val), Number(fee.value), Number(disc.value));
+                                                                                ? handleRreceiptDebitAccountUpdate(selectedAccountId, Number(fee?.value), Number(disc.value), Number(existingSetting.id))
+                                                                                : handleRreceiptDebitAccountAdd(selectedAccountId, Number(fee?.value), Number(disc.value));
                                                                         }}
                                                                     >
-                                                                        
+
                                                                         {campusDis4thLevel?.map((opt) => (
                                                                             <option key={opt.value} value={opt.value}>
                                                                                 {opt.label}

@@ -6,6 +6,7 @@ import axios from "axios";
 import { QRCodeCanvas } from 'qrcode.react';
 import { GetCampusBanksByCampus } from "../../../store/apps/campus-bank";
 import { feeTermsConditions } from '../../../environment';
+import html2pdf from 'html2pdf.js';
 
 const baseURL = process.env.REACT_APP_API_BASE_URL;
 
@@ -45,10 +46,11 @@ interface StudentItem {
 
 interface Props {
     data: StudentItem;
+    hideHeaderButtons?: boolean;
 }
 
-const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
-    const contentRef = useRef<HTMLDivElement>(null);
+const SingleFeeVoucher: React.FC<Props> = ({ data, hideHeaderButtons = false }) => {
+    const invoiceRef = useRef<HTMLDivElement>(null);
     const dispatch = useDispatch<AppDispatch>();
     const { data: bankDetails } = useSelector((state: RootState) => state.campusBank);
     const [campusApiInfo, setCampusApiInfo] = useState<any>(null);
@@ -142,6 +144,14 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
                     ? Boolean((data as any).isPayproEnabled)
                     : true;
 
+        const bankQrValue = bankAccounts && bankAccounts.length > 0
+            ? bankAccounts.map((b: any) => `${b.label} ${b.value}`).join('\n')
+            : [
+                ubl ? `UBL Account: ${ubl}` : '',
+                abl ? `ABL Account: ${abl}` : '',
+                mcb ? `MCB Account: ${mcb}` : '',
+              ].filter(Boolean).join('\n') || `Campus: ${(campusApiInfo?.name || data.campusName)?.toUpperCase() || ''}\nVoucher: ${serialNo}`;
+
         const campusAddress = campusApiInfo?.address || (data as any).campusAddress || (data as any).tblCampus?.address || (data as any).campusDetails?.address || "";
         const campusContact = campusApiInfo?.contactNumber || campusApiInfo?.contactNo || (data as any).campusContactNumber || (data as any).campusContact || (data as any).campusPhone || (data as any).tblCampus?.contactNumber || "";
         const campusEmail = campusApiInfo?.email || (data as any).campusEmail || (data as any).tblCampus?.email || "";
@@ -182,6 +192,7 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
             ablAccount: abl,
             mcbAccount: mcb,
             bankAccounts: bankAccounts,
+            bankQrValue: bankQrValue,
             details: details,
             isPayProEnabled: isPayProEnabled
         };
@@ -199,80 +210,21 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
         window.print();
     };
 
-    return (
-        <div className="print-container" style={{ padding: '20px', backgroundColor: '#525659', minHeight: '100vh' }}>
-            <style>{`
-        @media screen {
-          .invoice-page-container {
-            background: white;
-            width: 210mm;
-            min-height: 297mm;
-            margin: 20px auto;
-            padding: 12mm 15mm;
-            box-shadow: 0 0 20px rgba(0,0,0,0.4);
-            box-sizing: border-box;
-            font-family: 'Inter', Arial, sans-serif;
-            color: #000;
-          }
-        }
+    const handleDownloadPDF = () => {
+        if (!invoiceRef.current) return;
+        const opt = {
+            margin: [4, 4, 4, 4] as [number, number, number, number],
+            filename: `Fee-Invoice-${voucher.serialNo || voucher.regNo || 'Voucher'}.pdf`,
+            image: { type: 'jpeg' as const, quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        html2pdf().set(opt).from(invoiceRef.current).save();
+    };
 
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 8mm 10mm;
-          }
-
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-          
-          .print-container {
-            padding: 0 !important;
-            background: white !important;
-          }
-
-          body * {
-            visibility: hidden;
-          }
-
-          #print-area, #print-area * {
-            visibility: visible !important;
-          }
-
-          #print-area {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-          }
-
-          .invoice-page-container {
-            width: 100% !important;
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
-
-            <div className="no-print" style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <button
-                    onClick={handlePrint}
-                    style={{ padding: '12px 24px', backgroundColor: '#3498db', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                >
-                    Print Voucher
-                </button>
-            </div>
-
-            <div id="print-area" ref={contentRef}>
-                <div key={voucher.id} className="invoice-page-container">
+    const voucherContent = (
+        <div key={voucher.id} ref={invoiceRef} className="invoice-page-container" style={hideHeaderButtons ? { margin: '0 auto', boxShadow: 'none', background: '#fff', padding: '6mm 10mm', width: '202mm', boxSizing: 'border-box' } : {}}>
                     
                     {/* TOP SECTION: PARENT COPY */}
                     <div style={{ borderBottom: '2px dashed #444', paddingBottom: '16px', marginBottom: '16px' }}>
@@ -477,24 +429,37 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
                                             Pay through PayPro
                                         </div>
                                     ) : (
-                                        <div>
-                                            Please pay via 1-Bill (available through all banks), at UBL/ABL/MCB branches, online billing portal, or school POS terminals. Use approved channels for timely processing.
+                                        <div style={{ fontWeight: 700, fontSize: '10.5px', color: '#000' }}>
+                                            Bank details are available in the QR code.
                                         </div>
                                     )}
                                 </div>
 
-                                 {/* Payment QR Codes (PayPro QR & Payment Link QR) */}
+                                 {/* Payment QR Codes (PayPro QR / Bank Details QR & Payment Link QR) */}
                                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '16px', margin: '4px 0 6px 0' }}>
-                                     {/* PayPro QR Code */}
-                                     {(voucher.payproId || voucher.oneBillId) && (
-                                         <div style={{ textAlign: 'center' }}>
-                                             <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
-                                                 <QRCodeCanvas value={voucher.payproId || voucher.oneBillId} size={58} fgColor="#000" />
+                                     {/* PayPro QR Code (if isPayProEnabled) OR Campus Bank Details QR Code (if !isPayProEnabled) */}
+                                     {voucher.isPayProEnabled ? (
+                                         (voucher.payproId || voucher.oneBillId) && (
+                                             <div style={{ textAlign: 'center' }}>
+                                                 <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                     <QRCodeCanvas value={voucher.payproId || voucher.oneBillId} size={58} fgColor="#000" />
+                                                 </div>
+                                                 <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                     PayPro ID: {voucher.payproId || voucher.oneBillId}
+                                                 </div>
                                              </div>
-                                             <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
-                                                 PayPro ID: {voucher.payproId || voucher.oneBillId}
+                                         )
+                                     ) : (
+                                         voucher.bankQrValue && (
+                                             <div style={{ textAlign: 'center' }}>
+                                                 <div style={{ border: '1px solid #ccc', padding: '4px', backgroundColor: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                     <QRCodeCanvas value={voucher.bankQrValue} size={58} fgColor="#000" />
+                                                 </div>
+                                                 <div style={{ fontSize: '8.5px', fontWeight: 700, marginTop: '2px', color: '#111' }}>
+                                                     Bank Details
+                                                 </div>
                                              </div>
-                                         </div>
+                                         )
                                      )}
 
                                      {/* Click2Pay Payment Link QR Code */}
@@ -510,15 +475,17 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
                                      )}
                                  </div>
 
-                                {/* Important Instructions Box (Set under PayPro QR code) */}
+                                {/* Important Instructions Box (Set under PayPro / Bank Details QR code) */}
                                 <div style={{ border: '1px solid #000', padding: '6px 8px', borderRadius: '4px', fontSize: '8px', lineHeight: '1.3', backgroundColor: '#fff' }}>
                                     <div style={{ fontWeight: 800, fontSize: '8.5px', marginBottom: '3px', textTransform: 'uppercase', color: '#111' }}>
                                         Important Instructions:
                                     </div>
                                     <ol style={{ margin: 0, paddingLeft: '12px', color: '#222' }}>
-                                        {feeTermsConditions.map((instruction, idx) => (
-                                            <li key={idx} style={{ marginBottom: '1.5px' }}>{instruction}</li>
-                                        ))}
+                                        {feeTermsConditions
+                                            .filter((instruction) => voucher.isPayProEnabled || !instruction.toLowerCase().includes('paypro'))
+                                            .map((instruction, idx) => (
+                                                <li key={idx} style={{ marginBottom: '1.5px' }}>{instruction}</li>
+                                            ))}
                                     </ol>
                                 </div>
 
@@ -687,8 +654,95 @@ const SingleFeeVoucher: React.FC<Props> = ({ data }) => {
                             <div style={{ fontWeight: 800, fontSize: '11px' }}>Bank Copy</div>
                         </div>
                     </div>
+        </div>
+    );
 
-                </div>
+    if (hideHeaderButtons) {
+        return voucherContent;
+    }
+
+    return (
+        <div className="print-container" style={{ padding: '20px', backgroundColor: '#525659', minHeight: '100vh' }}>
+            <style>{`
+        @media screen {
+          .invoice-page-container {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            padding: 12mm 15mm;
+            box-shadow: 0 0 20px rgba(0,0,0,0.4);
+            box-sizing: border-box;
+            font-family: 'Inter', Arial, sans-serif;
+            color: #000;
+          }
+        }
+
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm 10mm;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          
+          .print-container {
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          #print-area, #print-area * {
+            visibility: visible !important;
+          }
+
+          #print-area {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+          }
+
+          .invoice-page-container {
+            width: 100% !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+            <div className="no-print" style={{ textAlign: 'center', marginBottom: '20px', display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                <button
+                    onClick={handlePrint}
+                    style={{ padding: '12px 24px', backgroundColor: '#3498db', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                    <i className="ti ti-printer me-2" />
+                    Print Voucher
+                </button>
+                <button
+                    onClick={handleDownloadPDF}
+                    style={{ padding: '12px 24px', backgroundColor: '#27ae60', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                    <i className="ti ti-file-download me-2" />
+                    Download PDF
+                </button>
+            </div>
+
+            <div id="print-area">
+                {voucherContent}
             </div>
         </div>
     );
