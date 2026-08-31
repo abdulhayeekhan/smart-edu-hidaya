@@ -48,6 +48,7 @@ import FinancialReportReducer from './apps/financial-report';
 import ClassTeacherReducer from './apps/class-teacher';
 import NotificationConfigReducer from './apps/notification-configuration';
 import ClassTimetableReducer from './apps/class-timetable';
+import StudentPromotionSlice from './apps/student-promotion';
 
 // Create the store
 export const store = configureStore({
@@ -96,7 +97,8 @@ export const store = configureStore({
     financialReport: FinancialReportReducer,
     classTeacher: ClassTeacherReducer,
     notificationConfig: NotificationConfigReducer,
-    classTimetable: ClassTimetableReducer
+    classTimetable: ClassTimetableReducer,
+    studentPromotion: StudentPromotionSlice
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
