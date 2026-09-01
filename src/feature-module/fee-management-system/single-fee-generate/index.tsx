@@ -97,6 +97,7 @@ const SingleFeeGenerate = () => {
     const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
     const loginInfo = userInfo?.data
     const userId = loginInfo?.id
+    const isSuperAdmin = Number(loginInfo?.roleId ?? loginInfo?.role_id) === 1;
     const regionsList = useRegionsList();
 
     const [regionId, setRegionId] = useState(loginInfo?.userLevel === 2 ? loginInfo?.userLevelId : null)
@@ -486,8 +487,13 @@ const SingleFeeGenerate = () => {
                                                         type="checkbox"
                                                         id="newAdmission"
                                                         checked={formData.newAdmission}
-                                                        readOnly
-                                                        disabled
+                                                        onChange={(e) =>
+                                                            setFormData((prev) => ({
+                                                                ...prev,
+                                                                newAdmission: e.target.checked,
+                                                            }))
+                                                        }
+                                                        disabled={!isSuperAdmin}
                                                     />
                                                     <label className="form-check-label" htmlFor="newAdmission">
                                                         {formData?.newAdmission ? "New Admission" : "Existing Student"}

@@ -11,7 +11,7 @@ import { usePermission } from "../../../core/common/selectoption/selectoption";
 const Designation = () => {
   const routes = all_routes;
   const dispatch = useDispatch<AppDispatch>();
-  const hasPermission = usePermission("Designations"); // Plural or singular based on system pattern
+  const hasPermission = usePermission("Designation");
   const { data, loading } = useSelector((state: RootState) => state.designation);
 
   const dropdownMenuRef = useRef<HTMLDivElement | null>(null);
@@ -19,7 +19,7 @@ const Designation = () => {
   const [addForm, setAddForm] = useState<Omit<DesignationType, 'id'>>({
     name: '',
     isHO: false,
-    sortOrder: 0
+    sortOrder: 1
   });
 
   const [editForm, setEditForm] = useState<DesignationType>({
@@ -36,6 +36,29 @@ const Designation = () => {
     dispatch(GetAllDesignations({ pageNo: 1, pageSize: 100, search: "" }));
   }, [dispatch]);
 
+  const calculateNextSortOrder = (designations: DesignationType[]) => {
+    if (!Array.isArray(designations) || designations.length === 0) return 1;
+    const maxSort = Math.max(...designations.map((d: any) => Number(d.sortOrder) || 0));
+    return maxSort + 1;
+  };
+
+  useEffect(() => {
+    const nextSort = calculateNextSortOrder(data);
+    setAddForm((prev) => ({
+      ...prev,
+      sortOrder: nextSort
+    }));
+  }, [data]);
+
+  const handleOpenAddModal = () => {
+    const nextSort = calculateNextSortOrder(data);
+    setAddForm({
+      name: '',
+      isHO: false,
+      sortOrder: nextSort
+    });
+  };
+
   const handleApplyClick = () => {
     if (dropdownMenuRef.current) {
       dropdownMenuRef.current.classList.remove("show");
@@ -46,11 +69,7 @@ const Designation = () => {
     e.preventDefault();
     await dispatch(AddDesignation(addForm)).then((res: any) => {
       if (!res.error) {
-        setAddForm({
-          name: '',
-          isHO: false,
-          sortOrder: 0
-        });
+        dispatch(GetAllDesignations({ pageNo: 1, pageSize: 100, search: "" }));
         document.getElementById('close-add-modal')?.click();
       }
     });
@@ -187,6 +206,7 @@ const Designation = () => {
                     className="btn btn-primary d-flex align-items-center"
                     data-bs-toggle="modal"
                     data-bs-target="#add_designation"
+                    onClick={handleOpenAddModal}
                   >
                     <i className="ti ti-square-rounded-plus me-2" />
                     Add Designation

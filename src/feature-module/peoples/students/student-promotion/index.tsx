@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import ImageWithBasePath from "../../../../core/common/imageWithBasePath"
 import { all_routes } from "../../../router/all_routes"
@@ -126,22 +126,8 @@ const StudentPromotion = () => {
     }
   }, [dispatch])
 
-  // Fetch eligible students on pagination / search change if promotion view is active
-  useEffect(() => {
-    if (isPromotionView && isSelectionComplete) {
-      fetchEligibleStudentsList(pageNo)
-    }
-  }, [pageNo, pageSize, search])
-
-  // Fetch history on history tab active or history filters change
-  useEffect(() => {
-    if (activeTab === 'history') {
-      fetchPromotionHistoryList(hPageNo)
-    }
-  }, [activeTab, hPageNo, hPageSize, hCampusId, hSessionId, hGradeId, hPromotionType, hFromDate, hToDate, hSearch])
-
   // Fetch Eligible Students List
-  const fetchEligibleStudentsList = (targetPage: number = 1) => {
+  const fetchEligibleStudentsList = useCallback((targetPage: number = 1) => {
     if (!isSelectionComplete) {
       return
     }
@@ -155,7 +141,38 @@ const StudentPromotion = () => {
       search
     }
     dispatch(GetEligibleStudents(filter))
-  }
+  }, [dispatch, isSelectionComplete, pageSize, campusId, loginInfo?.userLevelId, sessionId, gradeId, sectionId, search])
+
+  // Fetch History List
+  const fetchPromotionHistoryList = useCallback((targetPage: number = 1) => {
+    const filter = {
+      pageNo: targetPage,
+      pageSize: hPageSize,
+      campusId: hCampusId || loginInfo?.userLevelId || null,
+      admissionId: null,
+      sessionId: hSessionId,
+      gradeId: hGradeId,
+      promotionType: hPromotionType,
+      fromDate: hFromDate,
+      toDate: hToDate,
+      search: hSearch
+    }
+    dispatch(GetPromotionHistory(filter))
+  }, [dispatch, hPageSize, hCampusId, loginInfo?.userLevelId, hSessionId, hGradeId, hPromotionType, hFromDate, hToDate, hSearch])
+
+  // Fetch eligible students on pagination / search change if promotion view is active
+  useEffect(() => {
+    if (isPromotionView && isSelectionComplete) {
+      fetchEligibleStudentsList(pageNo)
+    }
+  }, [pageNo, pageSize, search, isPromotionView, isSelectionComplete, fetchEligibleStudentsList])
+
+  // Fetch history on history tab active or history filters change
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchPromotionHistoryList(hPageNo)
+    }
+  }, [activeTab, hPageNo, hPageSize, hCampusId, hSessionId, hGradeId, hPromotionType, hFromDate, hToDate, hSearch, fetchPromotionHistoryList])
 
   const handleManagePromotion = () => {
     if ((loginInfo?.userLevel === 1 || loginInfo?.userLevel === 2) && !campusId) {
@@ -256,23 +273,6 @@ const StudentPromotion = () => {
       setSelectedAdmissionIds([])
       fetchEligibleStudentsList(pageNo)
     }
-  }
-
-  // Fetch History List
-  const fetchPromotionHistoryList = (targetPage: number = 1) => {
-    const filter = {
-      pageNo: targetPage,
-      pageSize: hPageSize,
-      campusId: hCampusId || loginInfo?.userLevelId || null,
-      admissionId: null,
-      sessionId: hSessionId,
-      gradeId: hGradeId,
-      promotionType: hPromotionType,
-      fromDate: hFromDate,
-      toDate: hToDate,
-      search: hSearch
-    }
-    dispatch(GetPromotionHistory(filter))
   }
 
   // Table Row Selection for Eligible Students
@@ -750,7 +750,7 @@ const StudentPromotion = () => {
                     <h4 className="mb-3">Promotion & Demotion History</h4>
                     <div className="row g-2 mb-3">
                       {(loginInfo?.userLevel === 1 || loginInfo?.userLevel === 2) && (
-                        <div className="col-md-3">
+                        <div className="col-md-2">
                           <label className="form-label small">Campus</label>
                           <CommonSelect2
                             className="select"
@@ -787,7 +787,25 @@ const StudentPromotion = () => {
                           onChange={(opt: any) => setHPromotionType(opt?.value !== '' ? opt?.value : null)}
                         />
                       </div>
-                      <div className="col-md-3">
+                      <div className="col-md-2">
+                        <label className="form-label small">From Date</label>
+                        <DatePicker
+                          className="form-control"
+                          value={hFromDate ? dayjs(hFromDate) : null}
+                          onChange={(date) => setHFromDate(date ? date.toISOString() : null)}
+                          format="YYYY-MM-DD"
+                        />
+                      </div>
+                      <div className="col-md-2">
+                        <label className="form-label small">To Date</label>
+                        <DatePicker
+                          className="form-control"
+                          value={hToDate ? dayjs(hToDate) : null}
+                          onChange={(date) => setHToDate(date ? date.toISOString() : null)}
+                          format="YYYY-MM-DD"
+                        />
+                      </div>
+                      <div className="col-md-3 mt-2">
                         <label className="form-label small">Search</label>
                         <input
                           type="text"

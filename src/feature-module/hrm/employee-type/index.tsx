@@ -10,7 +10,7 @@ import { usePermission } from "../../../core/common/selectoption/selectoption";
 const EmployeeType = () => {
   const routes = all_routes;
   const dispatch = useDispatch<AppDispatch>();
-  const hasPermission = usePermission("EmployeeType"); 
+  const hasPermission = usePermission("Employee Type");
   const { data, loading } = useSelector((state: RootState) => state.employeeType);
 
   const dropdownMenuRef = useRef<HTMLDivElement | null>(null);

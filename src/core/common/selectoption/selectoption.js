@@ -57,16 +57,42 @@ export const useHoChartOfAccount4thLevel = () => {
 
 export const usePermission = (moduleName) => {
   const LoginInfo = JSON.parse(localStorage?.getItem("loginInfo") || "{}");
-  const roleId = LoginInfo?.roleId;
+  const userData = JSON.parse(localStorage?.getItem("userData") || "{}");
+  const loginData = LoginInfo?.data || LoginInfo;
+  const user = userData?.data || userData;
+  const roleId = Number(loginData?.roleId ?? loginData?.role_id ?? user?.roleId ?? user?.role_id ?? 0);
   const [permission, setPermission] = useState(null);
 
   useEffect(() => {
+    // Role 1 (Superadmin) gets full rights automatically
+    if (roleId === 1) {
+      setPermission({
+        viewRight: true,
+        addRight: true,
+        editRight: true,
+        deleteRight: true,
+      });
+      return;
+    }
+
     const getPermissionFunction = async () => {
       try {
         const savedRights = JSON.parse(localStorage.getItem("roleRights") || "[]");
-        const found = savedRights.find(
-          (i) => i.moduleName === moduleName
-        );
+        if (!moduleName) {
+          setPermission(null);
+          return;
+        }
+
+        const normTarget = moduleName.trim().toLowerCase().replace(/\s+/g, '');
+        const normTargetNoS = normTarget.endsWith('s') ? normTarget.slice(0, -1) : normTarget;
+
+        const found = savedRights.find((i) => {
+          if (!i?.moduleName) return false;
+          const normName = i.moduleName.trim().toLowerCase().replace(/\s+/g, '');
+          const normNameNoS = normName.endsWith('s') ? normName.slice(0, -1) : normName;
+          return normName === normTarget || normNameNoS === normTargetNoS;
+        });
+
         setPermission(found || null);
       } catch (err) {
         console.error("Failed to fetch permissions:", err);
@@ -79,7 +105,6 @@ export const usePermission = (moduleName) => {
   }, [roleId, moduleName]);
 
   return permission;
-
 };
 
 export const useCountries = () => {
