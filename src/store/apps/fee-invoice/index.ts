@@ -96,6 +96,13 @@ export interface ManualReceiptPayload {
     }[];
 }
 
+export interface BulkReceiptPayload {
+    campusId: number;
+    gradeId: number;
+    bankID: number;
+    invoiceIds: number[];
+}
+
 export interface FeeInvoiceState {
     data: FeeInvoice[];
     totalCount: number;
@@ -247,6 +254,25 @@ export const ManualReceiptDiscount = createAsyncThunk<any, ManualReceiptPayload>
     }
 );
 
+// 7. Process Bulk Receipt
+export const ProcessBulkReceipt = createAsyncThunk<any, BulkReceiptPayload>(
+    'feeInvoice/processBulkReceipt',
+    async (payload, { rejectWithValue }) => {
+        try {
+            const { data } = await axios.post(`${baseURL}/api/FeeInvoice/BulkReceipt`, payload);
+            if (data.status) {
+                toast.success(data.message || 'Bulk Receipts processed successfully');
+                return data.data;
+            }
+            toast.error(data.message);
+            return rejectWithValue(data.message);
+        } catch (error: any) {
+            toast.error(error.message);
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // =============== INITIAL STATE ===============
 const initialState: FeeInvoiceState = {
     data: [],
@@ -318,6 +344,11 @@ const FeeInvoiceSlice = createSlice({
                 // Usually, after bulk generation, we don't push to 'data' 
                 // because we don't want to mess up pagination.
                 // The component should re-dispatch GetFeeInvoices to refresh.
+                state.isActionLoading = false;
+            })
+
+            // Process Bulk Receipt
+            .addCase(ProcessBulkReceipt.fulfilled, (state) => {
                 state.isActionLoading = false;
             })
 

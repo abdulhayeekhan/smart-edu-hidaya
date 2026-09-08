@@ -525,10 +525,10 @@ const Expense = () => {
             <div className="print-header">
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <h1 style={{ color: '#004a99', margin: 0, fontWeight: 800, fontSize: '28px', fontFamily: "'RevuenCustom', sans-serif", letterSpacing: '1px' }}>
-                  DAR-E-ARQAM
+                  Hidaya International
                 </h1>
                 <h4 style={{ margin: 0, color: '#004a99', fontWeight: 600, letterSpacing: '2px', fontSize: '14px', fontFamily: "'RevuenCustom', sans-serif" }}>
-                  CENTRAL REGIONS
+                  Schools
                 </h4>
               </div>
               <div className="text-end">
@@ -598,7 +598,7 @@ const Expense = () => {
             </div>
 
             <div className="print-footer">
-              <p>Dar-E-Arqam Central Regions - Official Expense Report. System User: {userInfo?.data?.name || 'Authorized Personnel'}</p>
+              <p>Hidaya International Schools - Official Expense Report. System User: {userInfo?.data?.name || 'Authorized Personnel'}</p>
             </div>
           </div>
         </div>
@@ -817,8 +817,8 @@ const Expense = () => {
               >
                 Close
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn btn-info d-flex align-items-center"
                 onClick={handlePrintSingle}
                 disabled={!viewRecord}
@@ -839,10 +839,10 @@ const Expense = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #004a99', paddingBottom: '20px', marginBottom: '30px' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <h1 style={{ color: '#004a99', margin: 0, fontWeight: 800, fontSize: '26px', fontFamily: "'RevuenCustom', sans-serif", letterSpacing: '1px' }}>
-                  DAR-E-ARQAM
+                  Hidaya International
                 </h1>
                 <h6 style={{ margin: 0, color: '#004a99', fontWeight: 600, letterSpacing: '2px', fontSize: '12px', fontFamily: "'RevuenCustom', sans-serif" }}>
-                  CENTRAL REGIONS
+                  Schools
                 </h6>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -864,7 +864,7 @@ const Expense = () => {
               <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
                 <p style={{ margin: 0, fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>Campus Detail</p>
                 <p style={{ margin: 0, fontWeight: 800, color: '#004a99', fontSize: '15px' }}>{viewRecord.campusName || '-'}</p>
-                <p style={{ margin: 0, fontSize: '12px', color: '#333', fontWeight: 500 }}>Dar-E-Arqam Central Regions Schools</p>
+                <p style={{ margin: 0, fontSize: '12px', color: '#333', fontWeight: 500 }}>Hidaya International Schools</p>
               </div>
             </div>
 

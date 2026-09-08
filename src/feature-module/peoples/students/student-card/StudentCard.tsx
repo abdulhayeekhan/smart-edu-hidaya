@@ -14,12 +14,12 @@ const baseURL = process.env.REACT_APP_API_BASE_URL;
 
 const StudentCard = () => {
   const dispatch = useDispatch<AppDispatch>();
-  
+
   const userInfoString = localStorage.getItem("userData");
   const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
   const loginInfo = userInfo?.data;
   const [regionId] = useState<number>(0);
-  
+
   // Local state for filters
   const [campusId, setCampusId] = useState<number | null>(loginInfo?.userLevel === 3 ? loginInfo?.userLevelId : null);
   const [gradeId, setGradeId] = useState<number | null>(null);
@@ -27,12 +27,12 @@ const StudentCard = () => {
   const [searchText, setSearchText] = useState<string>("");
   const [template, setTemplate] = useState<string>("vertical");
   const [themeColor, setThemeColor] = useState<string>("#0d6efd");
-  
+
   // Data for selects
   const campuses = useCampusesList(loginInfo?.userLevel === 2 ? loginInfo?.userLevelId : regionId);
   const grades = useAcademicGrades();
   const sections = useSectionList(campusId);
-  
+
   // Fetched data
   const { data: datalist, loading } = useSelector((state: RootState) => state.admissions);
 
@@ -121,9 +121,9 @@ const StudentCard = () => {
                 </div>
               )}
               <div className="mb-3 me-2" style={{ minWidth: "200px" }}>
-                <input 
-                  type="text" 
-                  className="form-control" 
+                <input
+                  type="text"
+                  className="form-control"
                   placeholder="Search by Name or Reg/Roll No"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
@@ -154,12 +154,12 @@ const StudentCard = () => {
                 />
               </div>
               <div className="mb-3 me-3 d-flex align-items-center">
-                <input 
-                  type="color" 
-                  className="form-control form-control-color p-1" 
+                <input
+                  type="color"
+                  className="form-control form-control-color p-1"
                   style={{ width: "40px", height: "40px", cursor: "pointer" }}
-                  value={themeColor} 
-                  onChange={(e) => setThemeColor(e.target.value)} 
+                  value={themeColor}
+                  onChange={(e) => setThemeColor(e.target.value)}
                   title="Choose your card color"
                 />
               </div>
@@ -200,7 +200,7 @@ const StudentCard = () => {
                       </div>
                     </div>
                     <div className="card-footer text-center">
-                      <div className="official-font" style={{ fontSize: '11px', lineHeight: '1.2' }}>Dar-E-Arqam {student.campusName || "Campus Manager"}</div>
+                      <div className="official-font" style={{ fontSize: '11px', lineHeight: '1.2' }}>Hidaya International {student.campusName || "Campus Manager"}</div>
                       <div style={{ fontSize: '7px', marginTop: '2px', color: '#555', fontFamily: 'sans-serif', letterSpacing: '0.2px' }}>Powered by Dev Prism (Pvt) Ltd.</div>
                     </div>
                   </div>
@@ -226,7 +226,7 @@ const StudentCard = () => {
                     </div>
                   </div>
                   <div className="card-footer text-center">
-                    <div className="official-font" style={{ fontSize: '11px', lineHeight: '1.2' }}>Dar-E-Arqam {student.campusName || "Campus Manager"}</div>
+                    <div className="official-font" style={{ fontSize: '11px', lineHeight: '1.2' }}>Hidaya International {student.campusName || "Campus Manager"}</div>
                     <div style={{ fontSize: '7px', marginTop: '2px', color: '#555', fontFamily: 'sans-serif', letterSpacing: '0.2px' }}>Powered by Dev Prism (Pvt) Ltd.</div>
                   </div>
                 </div>

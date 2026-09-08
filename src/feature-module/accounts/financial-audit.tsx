@@ -11,7 +11,7 @@ interface AuditFormData {
 const SchoolFinancialAudit: React.FC = () => {
   // State typed with the interface
   const [formData, setFormData] = useState<AuditFormData>({
-    schoolBranch: 'Dar-e-Arqam - Main Campus',
+    schoolBranch: 'Hidaya International - Main Campus',
     auditPeriod: 'FY 2024-2025',
     submissionDate: new Date().toISOString().split('T')[0],
   });

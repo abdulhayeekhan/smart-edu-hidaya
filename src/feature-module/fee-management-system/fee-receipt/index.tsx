@@ -28,6 +28,8 @@ import {
 import useRegionsList from "../../../core/common/selectoption/master/useRegions";
 import { useCampusesList } from "../../../core/common/selectoption/master/useCampusesList";
 import { useAcademicGrades } from "../../../core/common/selectoption/academic/useAcademicGrades";
+import { useSectionList } from "../../../core/common/selectoption/academic/useSections";
+import { useAdmissions } from "../../../core/common/selectoption/academic/useAdmissions";
 import { useCities } from "../../../core/common/selectoption/address/useCities";
 import { TagsInput } from "react-tag-input-component";
 import CommonSelect from "../../../core/common/commonSelect";
@@ -154,6 +156,14 @@ const FeeReceipt = () => {
         }
     }, [campusId, dispatch]);
 
+    const [gradeId, setGradeId] = useState<number>(0);
+    const [sectionId, setSectionId] = useState<number>(0);
+    const [admissionId, setAdmissionId] = useState<number>(0);
+
+    const grades = useAcademicGrades();
+    const sections = useSectionList(campusId);
+    const { studentOptions } = useAdmissions({ externalCampusId: campusId, externalGradeId: gradeId, externalSectionId: sectionId });
+
 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [searchInvoice, setSearchInvoice] = useState<SearchInvoice>({
@@ -228,7 +238,29 @@ const FeeReceipt = () => {
         e.preventDefault()
         setSearching(true)
         try {
-            const data: any = await dispatch(GetInvoiceByNumber(searchInvoice))
+            let targetInvoiceNumber = searchInvoice.invoiceNumber;
+            if (!targetInvoiceNumber && admissionId) {
+                // Fetch the latest pending invoice for the admission
+                const invoicesData: any = await dispatch(GetFeeInvoices({ admissionId, status: "pending", pageSize: 1, pageNo: 1 } as FeeInvoiceFilter));
+                const invoices = invoicesData?.payload?.data;
+                if (invoices && invoices.length > 0) {
+                    targetInvoiceNumber = invoices[0].invoiceNumber;
+                    // Update form so it visually shows the found invoice
+                    setSearchInvoice(prev => ({ ...prev, invoiceNumber: targetInvoiceNumber }));
+                } else {
+                    toast.error("No pending invoices found for this student.");
+                    setSearching(false);
+                    return;
+                }
+            }
+
+            if (!targetInvoiceNumber) {
+                toast.error("Please enter a voucher number or select a student.");
+                setSearching(false);
+                return;
+            }
+
+            const data: any = await dispatch(GetInvoiceByNumber({ ...searchInvoice, invoiceNumber: targetInvoiceNumber }))
             const payload = data?.payload;
             if (payload?.invoiceStatusId === 2) {
                 setSearching(false)
@@ -533,9 +565,42 @@ const FeeReceipt = () => {
                                                 </div>
                                             </div>
                                         )}
+                                        <div className="col-md-3 mb-3">
+                                            <div className="mb-3">
+                                                <label className="form-label">Grade</label>
+                                                <CommonSelect3
+                                                    className="select"
+                                                    options={grades}
+                                                    onChange={(option) => { setGradeId(option?.value ? Number(option.value) : 0); setSectionId(0); setAdmissionId(0); }}
+                                                    value={gradeId ? grades.find(c => c.value === gradeId) : grades[0]}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-3 mb-3">
+                                            <div className="mb-3">
+                                                <label className="form-label">Section</label>
+                                                <CommonSelect3
+                                                    className="select"
+                                                    options={sections}
+                                                    onChange={(option) => { setSectionId(option?.value ? Number(option.value) : 0); setAdmissionId(0); }}
+                                                    value={sectionId ? sections.find(c => c.value === sectionId) : sections[0]}
+                                                />
+                                            </div>
+                                        </div>
                                         <div className="col-md-6 mb-3">
                                             <div className="mb-3">
-                                                <label className="form-label">Voucher Number</label>
+                                                <label className="form-label">Student (Admission)</label>
+                                                <CommonSelect3
+                                                    className="select"
+                                                    options={studentOptions}
+                                                    onChange={(option) => setAdmissionId(option?.value ? Number(option.value) : 0)}
+                                                    value={admissionId ? studentOptions.find((c: any) => c.value === admissionId) : studentOptions[0]}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="col-md-6 mb-3">
+                                            <div className="mb-3">
+                                                <label className="form-label">Or Voucher Number</label>
                                                 <input type="text"
                                                     className="form-control"
                                                     name="invoiceNumber"
