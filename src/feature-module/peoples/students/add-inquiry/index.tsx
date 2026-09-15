@@ -453,7 +453,7 @@ const AddStudentInquiry = () => {
                           {errors.firstName && <div className="text-danger fs-12">{errors.firstName}</div>}
                         </div>
                       </div>
-                      <div className="col-xxl col-xl-3 col-md-6">
+                      {/* <div className="col-xxl col-xl-3 col-md-6">
                         <div className="mb-3">
                           <label className="form-label">Middle Name</label>
                           <input
@@ -465,7 +465,7 @@ const AddStudentInquiry = () => {
                             onChange={handleChange}
                           />
                         </div>
-                      </div>
+                      </div> */}
                       <div className="col-xxl col-xl-3 col-md-6">
                         <div className="mb-3">
                           <label className="form-label">Last Name <span className="text-danger">*</span></label>

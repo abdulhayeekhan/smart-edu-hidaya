@@ -44,6 +44,7 @@ const CampusEmployeeModal: React.FC<Props> = ({ isOpen, setIsOpen, editId, campu
 
   const religions = useReligionsList();
   const paymentModes = [{ label: "Cash", value: "Cash" }, { label: "Bank", value: "Bank" }];
+  const genderOptions = gender.filter((g: any) => g.value !== 0);
 
   const maritalStatuses = [
     { label: "Single", value: 1 },
@@ -160,8 +161,19 @@ const CampusEmployeeModal: React.FC<Props> = ({ isOpen, setIsOpen, editId, campu
       }
       getCampusEmployees();
 
-      if (!editId && !formData.employeeKey) {
-        dispatch(GenerateEmployeeKey(formData.campusId));
+      if (!editId) {
+        dispatch(GenerateEmployeeKey(formData.campusId))
+          .unwrap()
+          .then((key: string) => {
+            if (key) {
+              setFormData((prev: any) => ({ ...prev, employeeKey: key }));
+            }
+          })
+          .catch(() => {});
+      }
+    } else {
+      if (!editId) {
+        setFormData((prev: any) => ({ ...prev, employeeKey: "" }));
       }
     }
   }, [formData.campusId, dispatch, editId]);
@@ -415,9 +427,9 @@ const CampusEmployeeModal: React.FC<Props> = ({ isOpen, setIsOpen, editId, campu
           <div className="col-md-4 mb-3">
             <label>Gender <span className="text-danger">*</span></label>
              <CommonSelect3
-                options={gender}
+                options={genderOptions}
                 name="gender"
-                value={getSelected(gender, formData.gender)}
+                value={getSelected(genderOptions, formData.gender)}
                 onChange={(opt) => handleSelectUpdate("gender", opt)}
                 placeholder="Select Gender"
                 className={errors.gender ? "border-danger" : ""}

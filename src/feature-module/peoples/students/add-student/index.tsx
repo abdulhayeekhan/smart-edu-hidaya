@@ -977,12 +977,12 @@ const AddStudent = () => {
                           {errors.firstName && <div className="invalid-feedback">First name is required</div>}
                         </div>
                       </div>
-                      <div className="col-xxl col-xl-3 col-md-6">
+                      {/* <div className="col-xxl col-xl-3 col-md-6">
                         <div className="mb-3">
                           <label className="form-label">Middle Name</label>
                           <input type="text" className="form-control" onChange={handleInputChange} name="middleName" value={formData?.middleName || ''} />
                         </div>
-                      </div>
+                      </div> */}
 
                       <div className="col-xxl col-xl-3 col-md-6">
                         <div className="mb-3">

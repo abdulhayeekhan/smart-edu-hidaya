@@ -514,7 +514,7 @@ export const useGender = [
 export const gender = [
   { value: 0, label: "Select" },
   { value: 1, label: "Male" },
-  { value: 0, label: "Female" },
+  { value: 2, label: "Female" },
 ];
 export const status = [
   { value: "Active", label: "Active" },

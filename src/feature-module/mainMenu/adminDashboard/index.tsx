@@ -466,7 +466,7 @@ const AdminDashboard = () => {
     chart: {
       height: 275,
       type: 'bar',
-      stacked: true,
+      stacked: false,
       toolbar: {
         show: false,
       }
@@ -484,6 +484,7 @@ const AdminDashboard = () => {
       bar: {
         horizontal: false,
         columnWidth: '50%',
+        borderRadius: 4,
         endingShape: 'rounded'
       },
     },
@@ -507,7 +508,12 @@ const AdminDashboard = () => {
     yaxis: {
       tickAmount: 3,
       labels: {
-        offsetX: -15
+        offsetX: -15,
+        formatter: (val: any) => {
+          if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+          if (val >= 1000) return (val / 1000).toFixed(0) + 'k';
+          return val !== null && val !== undefined ? Number(val).toLocaleString() : '0';
+        }
       },
     },
     fill: {
@@ -516,7 +522,7 @@ const AdminDashboard = () => {
     tooltip: {
       y: {
         formatter: function (val: any) {
-          return val + " thousands"
+          return val !== null && val !== undefined ? Number(val).toLocaleString() : '0';
         }
       }
     }
@@ -555,18 +561,18 @@ const AdminDashboard = () => {
         setFeesBarSeries([
           {
             name: 'Collected Fee',
-            data: monthlyData.map((item: any) => item.totalCollection ?? 0),
+            data: monthlyData.map((item: any) => Number(item.totalCollection ?? item.collectedFee ?? item.totalCollectedFee ?? 0)),
           },
           {
             name: 'Total Fee',
-            data: monthlyData.map((item: any) => item.totalFee ?? 0),
+            data: monthlyData.map((item: any) => Number(item.totalFee ?? item.totalFees ?? item.totalAmount ?? 0)),
           },
         ]);
         setFeesBarOptions((prev: any) => ({
           ...prev,
           xaxis: {
             ...prev.xaxis,
-            categories: monthlyData.map((item: any) => item.monthName ?? ''),
+            categories: monthlyData.map((item: any) => item.monthName ?? item.month ?? ''),
           },
         }));
       } else {

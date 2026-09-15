@@ -226,6 +226,7 @@ import SchoolSettings from "../settings/academicSettings/schoolSettings";
 import Religion from "../settings/academicSettings/religion";
 import Storage from "../settings/otherSettings/storage";
 import BanIpAddress from "../settings/otherSettings/banIpaddress";
+import Settings from "../settings";
 import AllBlogs from "../content/blog/allBlogs";
 import BlogCategories from "../content/blog/blogCategories";
 import BlogComments from "../content/blog/blogComments";
@@ -261,6 +262,7 @@ import StudentReport from "../report/student-report/studentReport";
 import DefaulterReport from "../report/defaulter-report";
 import ClassReport from "../report/class-report/classReport";
 import AttendanceReport from "../report/attendance-report/attendanceReport";
+import Reports from "../report";
 import ContactMessages from "../support/contactMessages";
 import Events from "../announcements/events";
 import Profile from "../pages/profile";
@@ -1619,6 +1621,14 @@ export const publicRoutes = [
   {
     path: routes.accountSetting,
     element: <AccountSetting />,
+  },
+  {
+    path: routes.reports,
+    element: <Reports />,
+  },
+  {
+    path: routes.settings,
+    element: <Settings />,
   },
 ];
 

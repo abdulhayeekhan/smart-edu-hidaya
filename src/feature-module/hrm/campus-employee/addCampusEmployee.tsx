@@ -49,6 +49,7 @@ const AddCampusEmployee = () => {
   const religions = useReligionsList();
   const cashHeadsFromHook = useCampusFeeRecAccount();
   const paymentModes = [{ label: "Cash", value: "Cash" }, { label: "Bank", value: "Bank" }];
+  const genderOptions = gender.filter((g: any) => g.value !== 0);
 
   const maritalStatuses = [
     { label: "Single", value: 1 },
@@ -158,8 +159,19 @@ const AddCampusEmployee = () => {
       }
       getCampusEmployees();
 
-      if (!editId && !formData.employeeKey) {
-        dispatch(GenerateEmployeeKey(formData.campusId));
+      if (!editId) {
+        dispatch(GenerateEmployeeKey(formData.campusId))
+          .unwrap()
+          .then((key: string) => {
+            if (key) {
+              setFormData((prev: any) => ({ ...prev, employeeKey: key }));
+            }
+          })
+          .catch(() => {});
+      }
+    } else {
+      if (!editId) {
+        setFormData((prev: any) => ({ ...prev, employeeKey: "" }));
       }
     }
   }, [formData.campusId, dispatch, editId]);
@@ -244,7 +256,7 @@ const AddCampusEmployee = () => {
 
     requiredFields.forEach(field => {
       const value = formData[field];
-      if (value === "" || value === null || value === undefined || (field !== 'gender' && value === 0)) {
+      if (value === "" || value === null || value === undefined || value === 0) {
         newErrors[field] = true;
       }
     });
@@ -417,9 +429,9 @@ const AddCampusEmployee = () => {
                 <div className="col-md-4 mb-3">
                   <label>Gender <span className="text-danger">*</span></label>
                   <CommonSelect3
-                    options={gender}
+                    options={genderOptions}
                     name="gender"
-                    value={getSelected(gender, formData.gender)}
+                    value={getSelected(genderOptions, formData.gender)}
                     onChange={(opt) => handleSelectUpdate("gender", opt)}
                     placeholder="Select Gender"
                     className={errors.gender ? "border-danger" : ""}

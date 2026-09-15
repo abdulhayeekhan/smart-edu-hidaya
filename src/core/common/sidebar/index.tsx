@@ -24,6 +24,8 @@ interface SidebarItem {
   submenu?: boolean;
   submenuItems?: SidebarItem[];
   moduleName?: string;   // this is needed for role-based filtering
+  moduleNames?: string[];// for one entry fronting several modules — any match keeps it
+  superAdminOnly?: boolean;
   [key: string]: any;    // keep it flexible for other props you already have
 }
 
@@ -51,6 +53,13 @@ const Sidebar = () => {
     return sidebarData
       .map((item): SidebarItem | null => {
 
+        const loginInfo = JSON.parse(localStorage?.getItem("loginInfo") || "{}");
+        const currentRoleId = loginInfo?.roleId;
+
+        if (item.superAdminOnly && currentRoleId !== 1) {
+          return null;
+        }
+
         const filteredSubmenu = item.submenuItems
           ? filterSidebarData(item.submenuItems, roleRights)
           : [];
@@ -60,16 +69,21 @@ const Sidebar = () => {
           return { ...item, submenuItems: filteredSubmenu };
         }
 
-        // 🔑 Use moduleName OR label for matching
-        const key = (item.moduleName ?? item.label ?? "")
-          .trim()
-          .toLowerCase();
+        const matchesRight = (candidate: string) => {
+          const key = candidate.trim().toLowerCase();
+          if (!key) return false;
 
-        const hasViewRight = roleRights.some((r) => {
-          if (!r.moduleName) return false;
-          const rName = r.moduleName.trim().toLowerCase();
-          return (rName === key || rName.includes(key) || key.includes(rName)) && r.viewRight;
-        });
+          return roleRights.some((r) => {
+            if (!r.moduleName) return false;
+            const rName = r.moduleName.trim().toLowerCase();
+            return (rName === key || rName.includes(key) || key.includes(rName)) && r.viewRight;
+          });
+        };
+
+        // Use moduleNames, else moduleName, else label for matching. A single entry that
+        // fronts several screens (Settings) lists them all and survives if any one is allowed
+        const keys = item.moduleNames ?? [item.moduleName ?? item.label ?? ""];
+        const hasViewRight = keys.some(matchesRight);
 
         if (hasViewRight) {
           return { ...item, submenuItems: [] };

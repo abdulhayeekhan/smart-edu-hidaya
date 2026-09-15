@@ -131,6 +131,7 @@ export const all_routes = {
   underMaintenance: "/under-maintenance",
 
   // settings routes
+  settings: "/settings",
   customFields: "/app-settings/custom-fields",
   invoiceSettings: "/app-settings/invoice-settings",
 
@@ -358,6 +359,9 @@ export const all_routes = {
   govtNotices: "/announcements/govt-notices",
 
   //Report
+  reports: "/reports",
+  salaryReport: "/reports/salary-report",
+  employeeLedgerReport: "/reports/employee-ledger-report",
   attendanceReport: "/report/attendance-report",
   classReport: "/report/class-report",
   studentReport: "/report/student-report",
