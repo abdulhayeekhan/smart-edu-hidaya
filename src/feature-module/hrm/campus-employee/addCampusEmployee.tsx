@@ -18,6 +18,8 @@ import { GetCampusBanksByCampus } from "../../../store/apps/campus-bank";
 import { useCampusFeeRecAccount } from "../../../core/common/selectoption/financial/useCampusFeeRecAccount";
 import axios from "axios";
 import { all_routes } from "../../router/all_routes";
+import ImageWithBasePath from "../../../core/common/imageWithBasePath";
+import CameraCapture from "../../../core/common/CameraCapture";
 
 const baseURL = process.env.REACT_APP_API_BASE_URL;
 
@@ -245,11 +247,137 @@ const AddCampusEmployee = () => {
 
   const getSelected = (options: any[], val: any) => options.find((o) => o.value === val) || null;
 
+  const [isCameraVisible, setIsCameraVisible] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const compressImage = (file: File, quality = 0.7): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error("Compression failed"));
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const processAndUploadDP = async (file: File) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a valid image (JPG, PNG, or SVG)");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      let processedFile: Blob | File = file;
+      if (file.type !== "image/svg+xml") {
+        processedFile = await compressImage(file, 0.7);
+      }
+
+      const uploadPayload = new FormData();
+      if (editId) {
+        uploadPayload.append("employeeId", editId.toString());
+      }
+      uploadPayload.append("file", processedFile, file.name);
+
+      const response = await axios.post(`${baseURL}/api/HREmployee/UploadProfileImage`, uploadPayload);
+
+      if (response.data.status) {
+        const newImageUrl = response.data.data;
+        setFormData((prev: any) => ({ ...prev, imageUrl: newImageUrl }));
+        toast.success(response.data.message || "Profile image uploaded successfully");
+
+        if (editId) {
+          try {
+            const updateUrl = `${baseURL}/api/HREmployee/UpdateProfileImage?employeeId=${editId}&imageUrl=${encodeURIComponent(newImageUrl)}`;
+            let updateRes;
+            try {
+              updateRes = await axios.post(updateUrl);
+            } catch (postErr: any) {
+              if (postErr.response?.status === 405) {
+                updateRes = await axios.put(updateUrl);
+              } else {
+                throw postErr;
+              }
+            }
+            if (updateRes?.data?.status) {
+              toast.success(updateRes.data.message || "Profile image updated successfully");
+            }
+          } catch (updateErr: any) {
+            console.error("Update profile image error:", updateErr);
+            toast.error("Failed to update profile image on server");
+          }
+        }
+      } else {
+        toast.error(response.data.message || "Failed to upload image");
+      }
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error(error.response?.data?.message || "Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleDPFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processAndUploadDP(file);
+    event.target.value = "";
+  };
+
+  const handleRemoveImage = async () => {
+    setFormData((prev: any) => ({
+      ...prev,
+      imageUrl: "",
+    }));
+    if (editId) {
+      try {
+        const updateUrl = `${baseURL}/api/HREmployee/UpdateProfileImage?employeeId=${editId}&imageUrl=`;
+        let updateRes;
+        try {
+          updateRes = await axios.post(updateUrl);
+        } catch (postErr: any) {
+          if (postErr.response?.status === 405) {
+            updateRes = await axios.put(updateUrl);
+          } else {
+            throw postErr;
+          }
+        }
+        if (updateRes?.data?.status) {
+          toast.success("Profile image removed successfully");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      toast.success("Image removed");
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, boolean> = {};
 
     const requiredFields = [
-      "campusId", "firstName", "departmentId", "designationId",
+      "campusId", "firstName", "lastName", "fatherName", "email", "departmentId", "designationId",
       "dob", "cnic", "joiningDate", "employeeTypeId", "gender", "martialStatus",
       "contactNumber", "paymentMode", "religionId"
     ];
@@ -362,8 +490,67 @@ const AddCampusEmployee = () => {
 
         <div className="card">
           <div className="card-body">
-            <Spin spinning={fetching}>
+            <Spin spinning={fetching || uploadingImage}>
               <div className="row">
+                {/* Profile Image Upload & Direct Camera Capture */}
+                <div className="col-12 mb-4">
+                  <div className="d-flex align-items-center flex-wrap row-gap-3">
+                    <div className="d-flex align-items-center justify-content-center avatar avatar-xxl border border-dashed me-3 flex-shrink-0 text-dark frames">
+                      <ImageWithBasePath
+                        src={
+                          formData?.imageUrl
+                            ? formData.imageUrl.startsWith("http")
+                              ? formData.imageUrl
+                              : `${baseURL}/${formData.imageUrl}`
+                            : "assets/img/profiles/avatar-02.jpg"
+                        }
+                        className="img-fluid rounded"
+                        alt="Employee Profile"
+                      />
+                    </div>
+                    <div className="profile-upload">
+                      <div className="profile-uploader d-flex align-items-center flex-wrap gap-2 mb-2">
+                        <div className="drag-upload-btn mb-0">
+                          Upload
+                          <input
+                            type="file"
+                            className="form-control image-sign"
+                            accept="image/jpeg, image/png, image/svg+xml"
+                            onChange={handleDPFileUpload}
+                            disabled={uploadingImage}
+                          />
+                        </div>
+                        <Link
+                          to="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setIsCameraVisible(true);
+                          }}
+                          className="btn btn-outline-primary"
+                          style={{ padding: "0.45rem 0.9rem" }}
+                        >
+                          <i className="ti ti-camera me-1"></i> Capture
+                        </Link>
+                        {formData?.imageUrl && (
+                          <Link
+                            to="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleRemoveImage();
+                            }}
+                            className="btn btn-danger"
+                          >
+                            Remove
+                          </Link>
+                        )}
+                      </div>
+                      <p className="fs-12 text-muted mb-0">
+                        Upload image size 4MB, Format JPG, PNG, SVG
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {(userLevel === 1 || userLevel === 2) && (
                   <div className="col-md-6 mb-3">
                     <label>Campus <span className="text-danger">*</span></label>
@@ -391,16 +578,16 @@ const AddCampusEmployee = () => {
                   <input name="middleName" value={formData.middleName} onChange={handleInputChange} className="form-control" />
                 </div>
                 <div className="col-md-4 mb-3">
-                  <label>Last Name</label>
-                  <input name="lastName" value={formData.lastName} onChange={handleInputChange} className="form-control" />
+                  <label>Last Name <span className="text-danger">*</span></label>
+                  <input name="lastName" value={formData.lastName} onChange={handleInputChange} className={`form-control ${errors.lastName ? 'border-danger' : ''}`} />
                 </div>
 
                 <div className="col-md-6 mb-3">
-                  <label>Father's Name</label>
-                  <input name="fatherName" value={formData.fatherName} onChange={handleInputChange} className="form-control" />
+                  <label>Father's Name <span className="text-danger">*</span></label>
+                  <input name="fatherName" value={formData.fatherName} onChange={handleInputChange} className={`form-control ${errors.fatherName ? 'border-danger' : ''}`} />
                 </div>
                 <div className="col-md-6 mb-3">
-                  <label>Email</label>
+                  <label>Email <span className="text-danger">*</span></label>
                   <input name="email" value={formData.email} onChange={handleInputChange} className={`form-control ${errors.email ? 'border-danger' : ''}`} />
                 </div>
 
@@ -569,7 +756,7 @@ const AddCampusEmployee = () => {
                 <button
                   className="btn btn-primary"
                   onClick={onSubmit}
-                  disabled={loading || !!(editId && !formData.isActive)}
+                  disabled={loading || uploadingImage || !!(editId && !formData.isActive)}
                 >
                   {loading ? 'Submitting...' : (editId && !formData.isActive) ? 'Inactive (Cannot Edit)' : 'Submit'}
                 </button>
@@ -578,6 +765,11 @@ const AddCampusEmployee = () => {
           </div>
         </div>
       </div>
+      <CameraCapture
+        visible={isCameraVisible}
+        onCancel={() => setIsCameraVisible(false)}
+        onCapture={processAndUploadDP}
+      />
     </div>
   );
 };

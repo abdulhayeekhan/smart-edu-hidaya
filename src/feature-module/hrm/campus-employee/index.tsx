@@ -10,10 +10,15 @@ import { useCampusesList } from "../../../core/common/selectoption/master/useCam
 // import CampusEmployeeModal from "./CampusEmployeeModal";
 import { GetAllEmployees, DeleteEmployee, UpdateEmployeeStatus } from "../../../store/apps/campus-employee";
 import TooltipOption from "../../../core/common/tooltipOption";
-import { exportToPDF } from "../../../core/common/exportUtils";
+import { exportToPDF, exportToExcel } from "../../../core/common/exportUtils";
 import { usePermission } from "../../../core/common/selectoption/selectoption";
 import { GetSingleUser, UpdateUser } from "../../../store/apps/account";
 import AddCredentialModal from "./AddCredentialModal";
+import ImageWithBasePath from "../../../core/common/imageWithBasePath";
+import axios from "axios";
+import dayjs from "dayjs";
+
+const baseURL = process.env.REACT_APP_API_BASE_URL;
 
 const AppCampusEmployee = () => {
   const routes = all_routes;
@@ -30,16 +35,22 @@ const AppCampusEmployee = () => {
   const [regionId, setRegionId] = useState<number>(loginInfo?.userLevel === 2 ? loginInfo?.userLevelId : 0);
   const campuses = useCampusesList(loginInfo?.userLevel === 2 ? loginInfo?.userLevelId : regionId);
   const [campusId, setCampusId] = useState<number | null>(loginInfo?.userLevel === 3 ? loginInfo?.userLevelId : null);
-
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchText, setSearchText] = useState("");
   const [isActiveFilter, setIsActiveFilter] = useState<string | null>(null);
+  const [genderFilter, setGenderFilter] = useState<number | null>(null);
 
   const statusOptions = [
     { value: 'all', label: "All Status" },
     { value: 'true', label: "Active" },
     { value: 'false', label: "Inactive" }
+  ];
+
+  const genderOptions = [
+    { value: 0, label: "All Gender" },
+    { value: 1, label: "Male" },
+    { value: 2, label: "Female" },
   ];
 
   const { data, loading, totalCount } = useSelector((state: RootState) => state.campusEmployee);
@@ -54,7 +65,7 @@ const AppCampusEmployee = () => {
         departmentId: null,
         designationId: null,
         employeeTypeId: null,
-        gender: null,
+        gender: genderFilter === 0 ? null : genderFilter,
         isActive: isActiveFilter === 'true' ? true : isActiveFilter === 'false' ? false : null,
         joiningDateFrom: "",
         joiningDateTo: "",
@@ -64,7 +75,7 @@ const AppCampusEmployee = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [pageNo, pageSize, searchText, campusId, isActiveFilter, dispatch]);
+  }, [pageNo, pageSize, searchText, campusId, isActiveFilter, genderFilter, dispatch]);
 
   const handleTableChange = (pagination: any) => {
     setPageNo(pagination.current);
@@ -117,8 +128,107 @@ const AppCampusEmployee = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    exportToPDF("Campus Employees", columns as any, data);
+  const handleExportPDF = async () => {
+    try {
+      const resp = await axios.post(`${baseURL}/api/HREmployee/GetAll`, {
+        pageNo: 1,
+        pageSize: 50000,
+        search: searchText,
+        campusId: campusId,
+        departmentId: null,
+        designationId: null,
+        employeeTypeId: null,
+        gender: genderFilter === 0 ? null : genderFilter,
+        isActive: isActiveFilter === 'true' ? true : isActiveFilter === 'false' ? false : null,
+        joiningDateFrom: "",
+        joiningDateTo: "",
+      });
+      const exportData = (resp.data && resp.data.data) ? resp.data.data : (data || []);
+      exportToPDF("Campus Staff List", columns as any, exportData);
+    } catch (e) {
+      exportToPDF("Campus Staff List", columns as any, data);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const resp = await axios.post(`${baseURL}/api/HREmployee/GetAll`, {
+        pageNo: 1,
+        pageSize: 50000,
+        search: searchText,
+        campusId: campusId,
+        departmentId: null,
+        designationId: null,
+        employeeTypeId: null,
+        gender: genderFilter === 0 ? null : genderFilter,
+        isActive: isActiveFilter === 'true' ? true : isActiveFilter === 'false' ? false : null,
+        joiningDateFrom: "",
+        joiningDateTo: "",
+      });
+
+      const exportData = (resp.data && resp.data.data) ? resp.data.data : (data || []);
+
+      const excelColumns = [
+        {
+          title: "S.No",
+          dataIndex: "id",
+          render: (_: any, __: any, index: number) => index + 1
+        },
+        { title: "Campus", dataIndex: "campusName" },
+        { title: "Employee ID", dataIndex: "employeeKey" },
+        {
+          title: "Full Name",
+          dataIndex: "firstName",
+          render: (_: any, r: any) => [r?.firstName, r?.middleName, r?.lastName].filter(Boolean).join(" ")
+        },
+        { title: "Father's Name", dataIndex: "fatherName" },
+        {
+          title: "Gender",
+          dataIndex: "gender",
+          render: (g: any) => g === 1 ? "Male" : g === 2 ? "Female" : ""
+        },
+        {
+          title: "Date of Birth",
+          dataIndex: "dob",
+          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
+        },
+        { title: "CNIC", dataIndex: "cnic" },
+        { title: "Email", dataIndex: "email" },
+        { title: "Contact Number", dataIndex: "contactNumber" },
+        { title: "Designation", dataIndex: "designationName" },
+        { title: "Department", dataIndex: "departmentName" },
+        { title: "Employee Type", dataIndex: "employeeTypeName" },
+        {
+          title: "Joining Date",
+          dataIndex: "joiningDate",
+          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
+        },
+        {
+          title: "Confirmation Date",
+          dataIndex: "confirmationDate",
+          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
+        },
+        {
+          title: "Marital Status",
+          dataIndex: "martialStatus",
+          render: (m: any) => m === 1 ? "Single" : m === 2 ? "Married" : m === 3 ? "Divorced" : m === 4 ? "Widowed" : ""
+        },
+        { title: "Religion", dataIndex: "religionName" },
+        { title: "EOBI", dataIndex: "eobi" },
+        { title: "Payment Mode", dataIndex: "paymentMode" },
+        { title: "Account Title", dataIndex: "accountTitle" },
+        { title: "Account Number", dataIndex: "accountNumber" },
+        {
+          title: "Status",
+          dataIndex: "isActive",
+          render: (active: any) => active ? "Active" : "Inactive"
+        }
+      ];
+
+      exportToExcel("Campus Staff List", excelColumns as any, exportData);
+    } catch (e) {
+      exportToExcel("Campus Staff List", columns as any, data);
+    }
   };
 
   const columns = [
@@ -131,8 +241,28 @@ const AppCampusEmployee = () => {
       title: "Name",
       dataIndex: "firstName",
       key: "name",
-      render: (text: string, record: any) =>
-        `${record.firstName || ""} ${record.middleName || ""} ${record.lastName || ""}`.trim(),
+      render: (text: string, record: any) => (
+        <div className="d-flex align-items-center">
+          <div className="avatar avatar-md me-2 flex-shrink-0">
+            <ImageWithBasePath
+              src={
+                record.imageUrl
+                  ? record.imageUrl.startsWith("http")
+                    ? record.imageUrl
+                    : `${baseURL}/${record.imageUrl}`
+                  : "assets/img/profiles/avatar-02.jpg"
+              }
+              className="img-fluid rounded-circle"
+              alt="avatar"
+            />
+          </div>
+          <div>
+            <span className="text-dark fw-medium d-block">
+              {`${record.firstName || ""} ${record.middleName || ""} ${record.lastName || ""}`.trim()}
+            </span>
+          </div>
+        </div>
+      ),
     },
     {
       title: "Designation",
@@ -256,6 +386,7 @@ const AppCampusEmployee = () => {
             <div className="d-flex my-xl-auto right-content align-items-center flex-wrap">
               <TooltipOption 
                 onExportPDF={handleExportPDF} 
+                onExportExcel={handleExportExcel}
                 onRefresh={fetchEmployees} 
                 onPrint={() => window.print()} 
               />
@@ -299,6 +430,15 @@ const AppCampusEmployee = () => {
                     />
                   </div>
                 ) : null}
+                <div className="me-3 mb-2" style={{ minWidth: "150px" }}>
+                  <CommonSelect3
+                    options={genderOptions}
+                    name="gender"
+                    value={genderOptions.find((o) => o.value === (genderFilter ?? 0)) || genderOptions[0]}
+                    onChange={(opt) => setGenderFilter(Number(opt?.value) || null)}
+                    placeholder="Select Gender"
+                  />
+                </div>
                 <div className="me-3 mb-2" style={{ minWidth: "150px" }}>
                   <CommonSelect3
                     options={statusOptions}

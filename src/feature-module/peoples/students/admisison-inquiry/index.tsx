@@ -22,12 +22,15 @@ import CommonSelect from "../../../../core/common/commonSelect";
 import CommonSelect2 from "../../../../core/common/commonSelect2";
 import CommonSelect3 from "../../../../core/common/commonSelect3";
 import TooltipOption from "../../../../core/common/tooltipOption";
-import { exportToPDF } from "../../../../core/common/exportUtils";
+import { exportToPDF, exportToExcel } from "../../../../core/common/exportUtils";
 import { InquiryType, GetInquiries } from '../../../../store/apps/inquiry'
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../../store";
+import axios from "axios";
 import { Popover } from "antd";
 import { Pagination } from "antd";
+
+const baseURL = process.env.REACT_APP_API_BASE_URL;
 
 const InquiryList = () => {
   const routes = all_routes;
@@ -60,8 +63,34 @@ const InquiryList = () => {
     // If we wanted to dispatch size change, we could handle it here.
   };
 
-  const handleExportPDF = () => {
-    exportToPDF("Admission Inquiry List", columns as any, data);
+  const handleExportPDF = async () => {
+    try {
+      const resp = await axios.post(`${baseURL}/api/Inquiry/GetAll`, {
+        pageNo: 1,
+        pageSize: 50000,
+        search,
+        campusId
+      });
+      const exportData = (resp.data && resp.data.data) ? resp.data.data : (data || []);
+      exportToPDF("Admission Inquiry List", columns as any, exportData);
+    } catch (e) {
+      exportToPDF("Admission Inquiry List", columns as any, data);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const resp = await axios.post(`${baseURL}/api/Inquiry/GetAll`, {
+        pageNo: 1,
+        pageSize: 50000,
+        search,
+        campusId
+      });
+      const exportData = (resp.data && resp.data.data) ? resp.data.data : (data || []);
+      exportToExcel("Admission Inquiry List", columns as any, exportData);
+    } catch (e) {
+      exportToExcel("Admission Inquiry List", columns as any, data);
+    }
   };
   const handleApplyClick = () => {
     if (dropdownMenuRef.current) {
@@ -266,6 +295,7 @@ const InquiryList = () => {
                 )}
                 <TooltipOption 
                   onExportPDF={handleExportPDF} 
+                  onExportExcel={handleExportExcel}
                   onRefresh={() => dispatch(GetInquiries({ pageNo, pageSize, search, campusId }))} 
                   onPrint={() => window.print()} 
                 />

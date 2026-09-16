@@ -22,11 +22,12 @@ import CommonSelect from "../../../../core/common/commonSelect";
 import { useAcademicGrades } from "../../../../core/common/selectoption/academic/useAcademicGrades";
 import CommonSelect2 from "../../../../core/common/commonSelect2";
 import TooltipOption from "../../../../core/common/tooltipOption";
-import { exportToPDF } from "../../../../core/common/exportUtils";
+import { exportToPDF, exportToExcel } from "../../../../core/common/exportUtils";
 import { AdmissionFilter, Admission, GetAdmissions, resetAdmissionState } from '../../../../store/apps/admissions';
 import { useSectionList } from '../../../../core/common/selectoption/academic/useSections';
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../../store";
+import axios from "axios";
 import { Pagination, Tooltip } from "antd";
 import CommonSelect3 from "../../../../core/common/commonSelect3";
 import StudentFeeModel from "../student-details/editFee"
@@ -79,13 +80,103 @@ const StudentList = () => {
     };
   }, [dispatch]);
 
-  //const data = Studentlist;
   const handleTableChange = (page: number, pageSize?: number) => {
-    setPageNo(page)
+    setPageNo(page);
   };
 
-  const handleExportPDF = () => {
-    exportToPDF("Student List", columns as any, datalist);
+  const handleExportExcel = async () => {
+    try {
+      const resp = await axios.post(`${baseURL}/api/Admission/GetAll`, {
+        pageNo: 1,
+        pageSize: 50000,
+        search: search,
+        gradeId: gradeId,
+        sectionId: sectionId,
+        campusId: campusId,
+        isEnabled: isEnabled
+      });
+
+      const exportData = (resp.data && resp.data.data) ? resp.data.data : (datalist || []);
+
+      const excelColumns = [
+        {
+          title: "S.No",
+          dataIndex: "id",
+          render: (_: any, __: any, index: number) => index + 1
+        },
+        { title: "Campus", dataIndex: "campusName" },
+        { title: "Roll No", dataIndex: "studentNumber" },
+        {
+          title: "Student Name",
+          dataIndex: "firstName",
+          render: (_: any, r: any) => [r?.firstName, r?.middleName, r?.lastName].filter(Boolean).join(" ")
+        },
+        { title: "Father Name", dataIndex: "fatherName" },
+        {
+          title: "Gender",
+          dataIndex: "gender",
+          render: (g: any) => g === 1 ? "Boy" : g === 2 ? "Girl" : ""
+        },
+        {
+          title: "Date of Birth",
+          dataIndex: "dateOfBirth",
+          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
+        },
+        {
+          title: "Admission Date",
+          dataIndex: "admissionDate",
+          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
+        },
+        { title: "Class / Grade", dataIndex: "grade" },
+        { title: "Section", dataIndex: "section" },
+        { title: "Session", dataIndex: "session" },
+        { title: "Contact Number", dataIndex: "contactNumber" },
+        { title: "Email", dataIndex: "email" },
+        { title: "CNIC / B-Form", dataIndex: "cnic", render: (_: any, r: any) => r?.bFormNumber || r?.cnic || "" },
+        { title: "Father CNIC", dataIndex: "fatherCNIC" },
+        { title: "Mother CNIC", dataIndex: "motherCNIC" },
+        { title: "Religion", dataIndex: "religion" },
+        { title: "Mother Tongue", dataIndex: "motherTonge" },
+        {
+          title: "Current Address",
+          dataIndex: "cHouseNo",
+          render: (_: any, r: any) => [r?.cHouseNo, r?.cStreetNo, r?.cTown, r?.cCity, r?.cProvince].filter(Boolean).join(", ")
+        },
+        {
+          title: "Permanent Address",
+          dataIndex: "pHouseNo",
+          render: (_: any, r: any) => [r?.pHouseNo, r?.pStreetNo, r?.pTown, r?.pCity, r?.pProvince].filter(Boolean).join(", ")
+        },
+        {
+          title: "Status",
+          dataIndex: "isEnabled",
+          render: (active: any) => active ? "Active" : "Inactive"
+        }
+      ];
+
+      exportToExcel("Student Admissions", excelColumns as any, exportData);
+    } catch (e) {
+      exportToExcel("Student Admissions", columns as any, datalist);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const resp = await axios.post(`${baseURL}/api/Admission/GetAll`, {
+        pageNo: 1,
+        pageSize: 50000,
+        search: search,
+        gradeId: gradeId,
+        sectionId: sectionId,
+        campusId: campusId,
+        isEnabled: isEnabled
+      });
+
+      const exportData = (resp.data && resp.data.data) ? resp.data.data : (datalist || []);
+      exportToPDF("Student List", columns as any, exportData);
+    } catch (e) {
+      exportToPDF("Student List", columns as any, datalist);
+    }
   };
 
   const handleRegionId = async (value: any) => {
@@ -344,6 +435,7 @@ const StudentList = () => {
                 </div>
                 <TooltipOption 
                    onExportPDF={handleExportPDF} 
+                   onExportExcel={handleExportExcel}
                    onRefresh={() => dispatch(GetAdmissions({ pageNo, pageSize, search, gradeId, sectionId, campusId, isEnabled }))} 
                    onPrint={() => window.print()} 
                 />

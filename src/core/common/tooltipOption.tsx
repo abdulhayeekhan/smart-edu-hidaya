@@ -1,13 +1,42 @@
 import React from "react";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { exportDOMTableToPDF, exportDOMTableToExcel } from "./exportUtils";
+
 interface TooltipOptionProps {
   onExportPDF?: () => void;
+  onExportExcel?: () => void;
   onPrint?: () => void;
   onRefresh?: () => void;
 }
 
-const TooltipOption = ({ onExportPDF, onPrint, onRefresh }: TooltipOptionProps) => {
+const TooltipOption = ({ onExportPDF, onExportExcel, onPrint, onRefresh }: TooltipOptionProps) => {
+  const handlePDF = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onExportPDF) {
+      onExportPDF();
+    } else {
+      exportDOMTableToPDF();
+    }
+  };
+
+  const handleExcel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onExportExcel) {
+      onExportExcel();
+    } else {
+      exportDOMTableToExcel();
+    }
+  };
+
+  const handlePrint = () => {
+    if (onPrint) {
+      onPrint();
+    } else {
+      window.print();
+    }
+  };
+
   return (
     <>
       <div className="pe-1 mb-2">
@@ -28,7 +57,7 @@ const TooltipOption = ({ onExportPDF, onPrint, onRefresh }: TooltipOptionProps) 
           <button
             type="button"
             className="btn btn-outline-light bg-white btn-icon me-1"
-            onClick={onPrint}
+            onClick={handlePrint}
           >
             <i className="ti ti-printer" />
           </button>
@@ -43,15 +72,15 @@ const TooltipOption = ({ onExportPDF, onPrint, onRefresh }: TooltipOptionProps) 
           <i className="ti ti-file-export me-2" />
           Export
         </Link>
-        <ul className="dropdown-menu  dropdown-menu-end p-3">
+        <ul className="dropdown-menu dropdown-menu-end p-3">
           <li>
-            <Link to="#" className="dropdown-item rounded-1" onClick={(e) => { e.preventDefault(); onExportPDF?.(); }}>
+            <Link to="#" className="dropdown-item rounded-1" onClick={handlePDF}>
               <i className="ti ti-file-type-pdf me-1" />
               Export as PDF
             </Link>
           </li>
           <li>
-            <Link to="#" className="dropdown-item rounded-1">
+            <Link to="#" className="dropdown-item rounded-1" onClick={handleExcel}>
               <i className="ti ti-file-type-xls me-1" />
               Export as Excel{" "}
             </Link>

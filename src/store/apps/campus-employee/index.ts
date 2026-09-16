@@ -236,6 +236,62 @@ export const GenerateEmployeeKey = createAsyncThunk<string, number>(
   }
 );
 
+export const UploadProfileImage = createAsyncThunk<string, { employeeId?: number | null; file: File | Blob }>(
+  'campusEmployee/uploadProfileImage',
+  async ({ employeeId, file }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      if (employeeId) {
+        formData.append('employeeId', employeeId.toString());
+      }
+      formData.append('file', file);
+
+      const response = await axios.post(`${baseURL}/api/HREmployee/UploadProfileImage`, formData);
+      const res = response.data;
+      if (res.status === true) {
+        toast.success(res.message || 'Profile image uploaded successfully');
+        return res.data;
+      } else {
+        toast.error(res.message || 'Failed to upload profile image');
+        return rejectWithValue(res.message);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error uploading profile image');
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const UpdateProfileImage = createAsyncThunk<any, { employeeId: number; imageUrl: string }>(
+  'campusEmployee/updateProfileImage',
+  async ({ employeeId, imageUrl }, { rejectWithValue }) => {
+    try {
+      const url = `${baseURL}/api/HREmployee/UpdateProfileImage?employeeId=${employeeId}&imageUrl=${encodeURIComponent(imageUrl)}`;
+      let response;
+      try {
+        response = await axios.post(url);
+      } catch (err: any) {
+        if (err.response?.status === 405) {
+          response = await axios.put(url);
+        } else {
+          throw err;
+        }
+      }
+      const res = response.data;
+      if (res.status === true) {
+        toast.success(res.message || 'Profile image updated successfully');
+        return res;
+      } else {
+        toast.error(res.message || 'Failed to update profile image');
+        return rejectWithValue(res.message);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error updating profile image');
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const campusEmployeeSlice = createSlice({
   name: 'campusEmployee',
   initialState,
