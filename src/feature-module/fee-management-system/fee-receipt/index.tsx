@@ -165,6 +165,7 @@ const FeeReceipt = () => {
     const { studentOptions } = useAdmissions({ externalCampusId: campusId, externalGradeId: gradeId, externalSectionId: sectionId });
 
 
+    const [searchMode, setSearchMode] = useState<"student" | "voucher">("student");
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [searchInvoice, setSearchInvoice] = useState<SearchInvoice>({
         invoiceNumber: location.state?.invoiceNumber || 0,
@@ -463,6 +464,9 @@ const FeeReceipt = () => {
     };
 
     const handleCancel = () => {
+        setGradeId(0);
+        setSectionId(0);
+        setAdmissionId(0);
         setSearchInvoice({
             invoiceNumber: 0,
             campusId: campusId,
@@ -532,14 +536,42 @@ const FeeReceipt = () => {
                 <div className="row">
                     <div className="col-md-12">
                         <form onSubmit={handleSearchInvoiceData}>
-                            <div className="card">
-                                <div className="card-body pb-1">
+                            <div className="card shadow-sm border-0 mb-4">
+                                <div className="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div>
+                                        <h5 className="mb-0 text-dark fw-bold d-flex align-items-center">
+                                            <i className="ti ti-receipt-2 text-primary me-2 fs-20" /> Search & Load Fee Invoice
+                                        </h5>
+                                        <p className="text-muted fs-12 mb-0 mt-1">
+                                            Quickly find fee invoices by Class & Student Admission or directly via Voucher Number.
+                                        </p>
+                                    </div>
+                                    <div className="btn-group bg-light p-1 rounded-pill border">
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-medium ${searchMode === "student" ? "btn-primary shadow-sm" : "btn-light text-muted border-0"}`}
+                                            onClick={() => setSearchMode("student")}
+                                        >
+                                            <i className="ti ti-user me-1" /> By Student
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm rounded-pill px-3 fw-medium ${searchMode === "voucher" ? "btn-primary shadow-sm" : "btn-light text-muted border-0"}`}
+                                            onClick={() => setSearchMode("voucher")}
+                                        >
+                                            <i className="ti ti-barcode me-1" /> By Voucher #
+                                        </button>
+                                    </div>
+                                </div>
 
-                                    <div className="row">
-                                        {loginInfo?.userLevel === 1 && (
-                                            <div className="col-md-6 mb-3">
-                                                <div className="mb-3">
-                                                    <label className="form-label">Region</label>
+                                <div className="card-body p-4">
+                                    {searchMode === "student" ? (
+                                        <div className="row g-3">
+                                            {loginInfo?.userLevel === 1 && (
+                                                <div className="col-md-4 col-lg-3">
+                                                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                        <i className="ti ti-map-pin text-primary me-1" /> Region
+                                                    </label>
                                                     <CommonSelect3
                                                         className="select"
                                                         options={regionsList}
@@ -547,163 +579,227 @@ const FeeReceipt = () => {
                                                         value={regionId ? regionsList.find(r => r.value === regionId) : regionsList[0]}
                                                     />
                                                 </div>
-                                            </div>
-                                        )}
-                                        {(loginInfo?.userLevel === 1 || loginInfo?.userLevel === 2) && (
-                                            <div className="col-md-6 mb-3">
-                                                <div className="mb-3">
-                                                    <label className="form-label">Campus</label>
+                                            )}
+                                            {(loginInfo?.userLevel === 1 || loginInfo?.userLevel === 2) && (
+                                                <div className="col-md-4 col-lg-3">
+                                                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                        <i className="ti ti-building text-primary me-1" /> Campus
+                                                    </label>
                                                     <CommonSelect3
                                                         className="select"
                                                         options={campuses}
-                                                        onChange={(option) =>
-                                                            handleSelectCampus('campusId', option)
-                                                        }
+                                                        onChange={(option) => handleSelectCampus('campusId', option)}
                                                         value={searchInvoice?.campusId ? campuses.find(c => c.value === searchInvoice?.campusId) : campuses[0]}
                                                     />
-                                                    {errors.campusId && <small className="text-danger">{errors.campusId}</small>}
+                                                    {errors.campusId && <small className="text-danger d-block mt-1">{errors.campusId}</small>}
                                                 </div>
-                                            </div>
-                                        )}
-                                        <div className="col-md-3 mb-3">
-                                            <div className="mb-3">
-                                                <label className="form-label">Grade</label>
+                                            )}
+                                            <div className="col-md-4 col-lg-3">
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                    <i className="ti ti-school text-primary me-1" /> Grade / Class
+                                                </label>
                                                 <CommonSelect3
                                                     className="select"
                                                     options={grades}
                                                     onChange={(option) => { setGradeId(option?.value ? Number(option.value) : 0); setSectionId(0); setAdmissionId(0); }}
                                                     value={gradeId ? grades.find(c => c.value === gradeId) : grades[0]}
+                                                    placeholder="Select Grade"
                                                 />
                                             </div>
-                                        </div>
-                                        <div className="col-md-3 mb-3">
-                                            <div className="mb-3">
-                                                <label className="form-label">Section</label>
+                                            <div className="col-md-4 col-lg-3">
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                    <i className="ti ti-layout-grid text-primary me-1" /> Section
+                                                </label>
                                                 <CommonSelect3
                                                     className="select"
                                                     options={sections}
                                                     onChange={(option) => { setSectionId(option?.value ? Number(option.value) : 0); setAdmissionId(0); }}
                                                     value={sectionId ? sections.find(c => c.value === sectionId) : sections[0]}
+                                                    placeholder="Select Section"
                                                 />
                                             </div>
-                                        </div>
-                                        <div className="col-md-6 mb-3">
-                                            <div className="mb-3">
-                                                <label className="form-label">Student (Admission)</label>
+                                            <div className="col-md-8 col-lg-8">
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1 d-flex align-items-center justify-content-between">
+                                                    <span><i className="ti ti-user-circle text-primary me-1" /> Student (Admission)</span>
+                                                    {studentOptions && studentOptions.length > 1 && (
+                                                        <span className="badge bg-primary-subtle text-primary fw-medium fs-11">
+                                                            {studentOptions.length - 1} Students Found
+                                                        </span>
+                                                    )}
+                                                </label>
                                                 <CommonSelect3
                                                     className="select"
                                                     options={studentOptions}
                                                     onChange={(option) => setAdmissionId(option?.value ? Number(option.value) : 0)}
                                                     value={admissionId ? studentOptions.find((c: any) => c.value === admissionId) : studentOptions[0]}
+                                                    placeholder="Search student by Name, Roll No or Father Name..."
                                                 />
                                             </div>
-                                        </div>
-                                        <div className="col-md-6 mb-3">
-                                            <div className="mb-3">
-                                                <label className="form-label">Or Voucher Number</label>
-                                                <input type="text"
-                                                    className="form-control"
-                                                    name="invoiceNumber"
-                                                    onChange={handleSearchInvoice}
-                                                    value={searchInvoice.invoiceNumber || ''}
-
-                                                />
-
+                                            <div className="col-md-4 col-lg-4 d-flex align-items-end">
+                                                <div className="d-flex gap-2 w-100">
+                                                    <button
+                                                        type="submit"
+                                                        className="btn btn-primary d-inline-flex align-items-center justify-content-center flex-grow-1 shadow-sm"
+                                                        style={{ height: "40px" }}
+                                                        disabled={searching}
+                                                    >
+                                                        {searching ? (
+                                                            <><span className="spinner-border spinner-border-sm me-2" /> Searching...</>
+                                                        ) : (
+                                                            <><i className="ti ti-search me-1 fs-15" /> Search Invoice</>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancel}
+                                                        className="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center px-3"
+                                                        style={{ height: "40px" }}
+                                                        title="Reset filters"
+                                                    >
+                                                        <i className="ti ti-rotate fs-15" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-
-
-
-
-
-
-                                        {/* <div className="col-md-6 mb-3">
-                                            <div className="mb-3">
-                                                <label className="form-label">Status</label>
-                                                <CommonSelect3
-                                                    className="select"
-                                                    options={feesStatuses}
-                                                    onChange={(option) => handleSelectChanges('status', option?.value)}
-                                                    value={formData?.status ? feesStatuses.find(r => r.value === formData?.status) : feesStatuses[0]}
-                                                />
-                                                {errors.status && <small className="text-danger">{errors.status}</small>}
-
+                                    ) : (
+                                        <div className="row g-3">
+                                            {loginInfo?.userLevel === 1 && (
+                                                <div className="col-md-4 col-lg-3">
+                                                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                        <i className="ti ti-map-pin text-primary me-1" /> Region
+                                                    </label>
+                                                    <CommonSelect3
+                                                        className="select"
+                                                        options={regionsList}
+                                                        onChange={(option) => handleSelectRegion('regions', option)}
+                                                        value={regionId ? regionsList.find(r => r.value === regionId) : regionsList[0]}
+                                                    />
+                                                </div>
+                                            )}
+                                            {(loginInfo?.userLevel === 1 || loginInfo?.userLevel === 2) && (
+                                                <div className="col-md-4 col-lg-3">
+                                                    <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                        <i className="ti ti-building text-primary me-1" /> Campus
+                                                    </label>
+                                                    <CommonSelect3
+                                                        className="select"
+                                                        options={campuses}
+                                                        onChange={(option) => handleSelectCampus('campusId', option)}
+                                                        value={searchInvoice?.campusId ? campuses.find(c => c.value === searchInvoice?.campusId) : campuses[0]}
+                                                    />
+                                                    {errors.campusId && <small className="text-danger d-block mt-1">{errors.campusId}</small>}
+                                                </div>
+                                            )}
+                                            <div className="col-md-6 col-lg-6">
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                    <i className="ti ti-barcode text-primary me-1" /> Voucher / Invoice Number
+                                                </label>
+                                                <div className="input-group">
+                                                    <span className="input-group-text bg-light text-muted border-end-0">
+                                                        <i className="ti ti-receipt text-primary fs-16" />
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        className="form-control border-start-0 ps-1"
+                                                        name="invoiceNumber"
+                                                        placeholder="Enter Voucher Number (e.g. 100234)"
+                                                        onChange={handleSearchInvoice}
+                                                        value={searchInvoice.invoiceNumber || ''}
+                                                    />
+                                                </div>
                                             </div>
-                                        </div> */}
-                                        <div className="col-md-6 mb-3 mt-4">
-                                            <button
-                                                type="submit"
-                                                className="btn btn-primary mt-1"
-                                                disabled={searching}
-                                            >
-                                                {searching ? (
-                                                    <><span className="spinner-border spinner-border-sm me-2" /> Search...</>
-                                                ) : (
-                                                    'Search Invoices'
-                                                )}
-                                            </button>
+                                            <div className="col-md-4 col-lg-3 d-flex align-items-end">
+                                                <div className="d-flex gap-2 w-100">
+                                                    <button
+                                                        type="submit"
+                                                        className="btn btn-primary d-inline-flex align-items-center justify-content-center flex-grow-1 shadow-sm"
+                                                        style={{ height: "40px" }}
+                                                        disabled={searching}
+                                                    >
+                                                        {searching ? (
+                                                            <><span className="spinner-border spinner-border-sm me-2" /> Searching...</>
+                                                        ) : (
+                                                            <><i className="ti ti-search me-1 fs-15" /> Search Invoice</>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancel}
+                                                        className="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center px-3"
+                                                        style={{ height: "40px" }}
+                                                        title="Reset filters"
+                                                    >
+                                                        <i className="ti ti-rotate fs-15" />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
-
                             </div>
                         </form>
                     </div>
+
                     {formData?.id > 0 && (
                         <>
                             <div className="col-md-12">
-                                <div className="card shadow-sm mb-4">
-                                    <div className="card-body">
-                                        <div className="row">
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Session :</strong>
-                                                    <span>{formData?.session || ''}</span>
+                                <div className="card shadow-sm border-0 mb-4 overflow-hidden">
+                                    <div className="card-header bg-light-300 py-3 border-bottom d-flex align-items-center justify-content-between">
+                                        <h5 className="card-title mb-0 d-flex align-items-center text-dark fw-bold">
+                                            <i className="ti ti-id-badge-2 text-primary me-2 fs-18" /> Student & Invoice Summary
+                                        </h5>
+                                        <span className={`badge px-3 py-2 fs-12 ${formData?.status?.toLowerCase() === 'paid' ? 'bg-success text-white' : 'bg-warning text-dark'}`}>
+                                            <i className="ti ti-point-filled me-1" /> {formData?.status || 'Pending'}
+                                        </span>
+                                    </div>
+                                    <div className="card-body p-4">
+                                        <div className="row g-3">
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-calendar-event me-1 text-primary" /> Session</small>
+                                                    <strong className="text-dark fs-14">{formData?.session || 'N/A'}</strong>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Grade :</strong>
-                                                    <span>{formData?.grade || ''}</span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-school me-1 text-primary" /> Grade / Class</small>
+                                                    <strong className="text-dark fs-14">{formData?.grade || 'N/A'}</strong>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Registration No :</strong>
-                                                    <span>{formData?.studentNumber || ''}</span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-hash me-1 text-primary" /> Registration No</small>
+                                                    <strong className="text-dark fs-14">{formData?.studentNumber || 'N/A'}</strong>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Name :</strong>
-                                                    <span>{formData?.firstName + ' ' + formData?.lastName || ''}</span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-user me-1 text-primary" /> Student Name</small>
+                                                    <strong className="text-dark fs-14">{`${formData?.firstName || ''} ${formData?.lastName || ''}`.trim() || 'N/A'}</strong>
                                                 </div>
                                             </div>
-
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Invoice Status :</strong>
-                                                    <span className="badge bg-warning text-dark">{formData?.status}</span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-barcode me-1 text-primary" /> Voucher Number</small>
+                                                    <strong className="text-primary fs-14">#{formData?.invoiceNumber || 'N/A'}</strong>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Voucher Number :</strong>
-                                                    <span>{formData?.invoiceNumber || ''}</span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-calendar me-1 text-primary" /> Invoice Date</small>
+                                                    <strong className="text-dark fs-14">{formData?.invoiceDate ? dayjs(formData?.invoiceDate).format("DD-MMM-YYYY") : 'N/A'}</strong>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Invoice Date :</strong>
-                                                    <span>
-                                                        {dayjs(formData?.invoiceDate).format("DD-MMM-YYYY")}
-                                                    </span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-calendar-due me-1 text-danger" /> Due Date</small>
+                                                    <strong className="text-danger fs-14">{formData?.dueDate ? dayjs(formData?.dueDate).format("DD-MMM-YYYY") : 'N/A'}</strong>
                                                 </div>
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <div className="d-flex justify-content-between border-bottom pb-2">
-                                                    <strong>Due Date :</strong>
-                                                    <span className="text-danger">{dayjs(formData?.dueDate).format("DD-MMM-YYYY")}</span>
+                                            <div className="col-md-6 col-lg-3">
+                                                <div className="p-3 bg-light rounded-3 border">
+                                                    <small className="text-muted d-block mb-1"><i className="ti ti-cash me-1 text-success" /> Net Amount</small>
+                                                    <strong className="text-success fs-15">Rs. {formData?.netAmount?.toLocaleString() || '0'}</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -783,29 +879,41 @@ const FeeReceipt = () => {
                                     </div>
                                 </div>
 
-                                <div className="card shadow-sm">
-                                    <div className="card-header bg-white">
-                                        <h5 className="card-title mb-0">Payment Details</h5>
+                                <div className="card shadow-sm border-0 mb-4 overflow-hidden">
+                                    <div className="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                                        <h5 className="card-title mb-0 fw-bold text-dark d-flex align-items-center">
+                                            <i className="ti ti-wallet text-primary me-2 fs-18" /> Payment Details
+                                        </h5>
                                     </div>
-                                    <div className="card-body">
-                                        <div className="row">
-                                            <div className="col-md-6 mb-3">
-                                                <label className="form-label">Bank/Cash <span className="text-danger">*</span></label>
+                                    <div className="card-body p-4">
+                                        <div className="row g-3">
+                                            <div className="col-md-6">
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                    <i className="ti ti-building-bank text-primary me-1" /> Deposit Account (Bank / Cash) <span className="text-danger">*</span>
+                                                </label>
                                                 <CommonSelect3
                                                     className="select"
                                                     options={combinedOptions}
                                                     onChange={(option) => handleSelectChanges('receiptAccount', option)}
                                                     value={
                                                         searchInvoice?.receiptAccount
-                                                            // Cast both sides to Number
                                                             ? combinedOptions.find(r => Number(r?.value) === Number(searchInvoice?.receiptAccount))
                                                             : combinedOptions[0]
                                                     }
+                                                    placeholder="Select Deposit Bank or Cash Account"
                                                 />
                                             </div>
-                                            <div className="col-md-6 mb-3">
-                                                <label className="form-label">Transaction ReferenceNo</label>
-                                                <input type="text" className="form-control" onChange={e => handleChange('referenceNo', e.target.value)} name="referenceNo" placeholder="Enter Reference No" />
+                                            <div className="col-md-6">
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                    <i className="ti ti-receipt-2 text-primary me-1" /> Transaction Reference No
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    onChange={e => handleChange('referenceNo', e.target.value)}
+                                                    name="referenceNo"
+                                                    placeholder="e.g. Bank slip # / Cheque # / Online Txn ID"
+                                                />
                                             </div>
                                         </div>
                                     </div>
