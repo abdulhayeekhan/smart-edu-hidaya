@@ -453,14 +453,17 @@ function LandscapeFeeVoucher({ datalist }: Props) {
             const dueDate = item.dueDate ? dayjs(item.dueDate).format("MMM DD, YYYY") : "";
             const validityDate = item.dueDate ? dayjs(item.dueDate).add(5, 'day').format("MMM DD, YYYY") : "";
 
-            const ubl = bankDetails?.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('ubl'))?.iban
-                || bankDetails[0]?.iban || "";
-            const abl = bankDetails?.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('abl'))?.iban
-                || bankDetails[1]?.iban || "";
-            const mcb = bankDetails?.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('mcb'))?.iban
-                || bankDetails[2]?.iban || "";
+            const defaultBanks = bankDetails?.filter((b: any) => Boolean(b.isDefaultForFeeInvoice));
+            const banksToDisplay = (defaultBanks && defaultBanks.length > 0) ? defaultBanks : (bankDetails || []);
 
-            const bankAccounts = bankDetails?.map((b: any) => {
+            const ubl = banksToDisplay.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('ubl'))?.iban
+                || banksToDisplay[0]?.iban || "";
+            const abl = banksToDisplay.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('abl'))?.iban
+                || banksToDisplay[1]?.iban || "";
+            const mcb = banksToDisplay.find((b: any) => b.tblAccountBank?.name?.toLowerCase().includes('mcb'))?.iban
+                || banksToDisplay[2]?.iban || "";
+
+            const bankAccounts = banksToDisplay.map((b: any) => {
                 const bankName = b.tblAccountBank?.name || b.bankName || "Bank";
                 const title = b.accountTitle ? ` (${b.accountTitle})` : "";
                 const iban = b.iban || b.accountNo || b.accountNumber || "";

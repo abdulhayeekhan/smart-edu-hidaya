@@ -12,7 +12,12 @@ export interface CampusBankType {
     accountId: number
     accountTitle: string
     iban: string
+    isDefaultForFeeInvoice: boolean
     tblAccountBank?: {
+        id: number;
+        name: string;
+    };
+    tblCampus?: {
         id: number;
         name: string;
     };
@@ -33,16 +38,27 @@ export const AddBankCampus = createAsyncThunk<any, CampusBankType>(
     'campusBank/add',
     async (payload, { rejectWithValue, dispatch }) => {
         try {
+            const body = {
+                id: payload.id ?? 0,
+                campusId: Number(payload.campusId),
+                bankId: Number(payload.bankId),
+                accountId: Number(payload.accountId ?? 0),
+                accountTitle: payload.accountTitle,
+                iban: payload.iban,
+                isDefaultForFeeInvoice: Boolean(payload.isDefaultForFeeInvoice)
+            };
+
             const { data } = await axios.post(
                 `${baseURL}/api/Campus/AddBankCampus`,
-                payload
+                body
             )
 
             if (data.status) {
                 toast.success('Bank added to campus successfully')
-                // Option: Re-fetch list if you have a Get function
-                // dispatch(GetCampusBanks(payload.campusId)) 
-                return data.data
+                if (payload.campusId) {
+                    dispatch(GetCampusBanksByCampus(payload.campusId))
+                }
+                return (data.data && typeof data.data === 'object') ? data.data : body
             }
 
             toast.error(data.message || 'Failed to add bank')
@@ -71,15 +87,27 @@ export const UpdateBankCampus = createAsyncThunk<any, CampusBankType>(
     'campusBank/update',
     async (payload, { rejectWithValue, dispatch }) => {
         try {
-            // Specifically using POST per your request
+            const body = {
+                id: Number(payload.id),
+                campusId: Number(payload.campusId),
+                bankId: Number(payload.bankId),
+                accountId: Number(payload.accountId ?? 0),
+                accountTitle: payload.accountTitle,
+                iban: payload.iban,
+                isDefaultForFeeInvoice: Boolean(payload.isDefaultForFeeInvoice)
+            };
+
             const { data } = await axios.post(
                 `${baseURL}/api/Campus/UpdateBankCampus`,
-                payload
+                body
             )
 
             if (data.status) {
                 toast.success('Campus bank updated successfully')
-                return data.data
+                if (payload.campusId) {
+                    dispatch(GetCampusBanksByCampus(payload.campusId))
+                }
+                return (data.data && typeof data.data === 'object') ? data.data : body
             }
 
             toast.error(data.message || 'Failed to update campus bank')
@@ -119,7 +147,7 @@ const CampusBankSlice = createSlice({
             })
             .addCase(GetCampusBanksByCampus.fulfilled, (state, action) => {
                 state.loading = false
-                state.data = action.payload
+                state.data = action.payload || []
             })
             .addCase(GetCampusBanksByCampus.rejected, (state, action) => {
                 state.loading = false;
@@ -132,7 +160,9 @@ const CampusBankSlice = createSlice({
             .addCase(AddBankCampus.fulfilled, (state, action) => {
                 state.loading = false
                 state.status = true
-                state.data.unshift(action.payload)
+                if (action.payload && typeof action.payload === 'object') {
+                    state.data.unshift(action.payload)
+                }
             })
             .addCase(AddBankCampus.rejected, (state, action) => {
                 state.loading = false
@@ -146,9 +176,11 @@ const CampusBankSlice = createSlice({
             .addCase(UpdateBankCampus.fulfilled, (state, action) => {
                 state.loading = false
                 state.status = true
-                const index = state.data.findIndex(b => b.id === action.payload.id)
-                if (index !== -1) {
-                    state.data[index] = action.payload
+                if (action.payload && action.payload.id) {
+                    const index = state.data.findIndex(b => b.id === action.payload.id)
+                    if (index !== -1) {
+                        state.data[index] = { ...state.data[index], ...action.payload }
+                    }
                 }
             })
             .addCase(UpdateBankCampus.rejected, (state, action) => {

@@ -6,7 +6,8 @@ import type { RootState, AppDispatch } from "../../../../store";
 import useRegionsList from "../../../../core/common/selectoption/master/useRegions";
 import { useCampusesList } from "../../../../core/common/selectoption/master/useCampusesList";
 import { useBanks } from "../../../../core/common/selectoption/financial/useBank"; // Your custom hook
-import { CampusBankType, AddBankCampus, UpdateBankCampus } from "../../../../store/apps/campus-bank";
+import { useCampusBankAccount } from "../../../../core/common/selectoption/financial/useCampusBankAccount";
+import { CampusBankType, AddBankCampus, UpdateBankCampus, GetCampusBanksByCampus } from "../../../../store/apps/campus-bank";
 import toast from 'react-hot-toast'
 
 interface CampusBankModalProps {
@@ -16,8 +17,8 @@ interface CampusBankModalProps {
 const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
   const dispatch = useDispatch<AppDispatch>();
   const regionsList = useRegionsList();
-  const bankOptions = useBanks(); // Hook to get {id, accountName, accountCode}
-
+  const bankOptions = useBanks(); // Hook to get {id, name}
+  
   const { data: existingData, loading } = useSelector((state: RootState) => state.campusBank);
   const userInfo = JSON.parse(localStorage.getItem("userData") || "{}")?.data;
 
@@ -28,17 +29,31 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
     id: 0,
     campusId: userInfo?.userLevel === 3 ? userInfo?.userLevelId : 0,
     bankId: 0,
-    accountId: 87,
+    accountId: 0,
     accountTitle: "",
-    iban: ""
+    iban: "",
+    isDefaultForFeeInvoice: false
   };
 
   const [formData, setFormData] = useState<CampusBankType>(initialFormState);
+  const accountOptions = useCampusBankAccount(formData.campusId);
 
   // Sync state when editing
   useEffect(() => {
     if (isEditData) {
-      setFormData(isEditData);
+      const isDefault = (isEditData as any).isDefaultForFeeInvoice === true || 
+                        (isEditData as any).isDefaultForFeeInvoice === 1 || 
+                        (isEditData as any).isDefaultForFeeInvoice === "true" ||
+                        (isEditData as any).isDefaultForFeeInvoice === "1";
+      setFormData({
+        id: isEditData.id ?? 0,
+        campusId: isEditData.campusId ?? 0,
+        bankId: isEditData.bankId ?? 0,
+        accountId: isEditData.accountId ?? 0,
+        accountTitle: isEditData.accountTitle ?? "",
+        iban: isEditData.iban ?? "",
+        isDefaultForFeeInvoice: isDefault
+      });
     } else {
       setFormData(initialFormState);
     }
@@ -51,13 +66,7 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
 
   const handleSelectChange = (name: keyof CampusBankType, opt: any) => {
     setFormData(prev => ({ ...prev, [name]: opt.value }));
-
-    // Auto-fill accountId if bank selection implies it, or handle separately
-    // if (name === "bankId") {
-    //     setFormData(prev => ({ ...prev, accountId: opt.value }));
-    // }
   };
-  // Debug log to check form data
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,19 +79,13 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
 
     // 2. Duplicate Check (Only for NEW entries)
     if (!isEditData) {
-      // const isDuplicate = existingData.some(
-      //   (item) =>
-      //     item.campusId === formData.campusId &&
-      //     item.bankId === formData.bankId
-      // );
-
       const isDuplicate = existingData.some(
         (item) =>
-          item.campusId === formData.campusId
+          item.campusId === formData.campusId && item.bankId === formData.bankId
       );
 
       if (isDuplicate) {
-        toast.error("Bank account is already registered for this campus.");
+        toast.error("This bank account is already registered for this campus.");
         return;
       }
     }
@@ -95,16 +98,19 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
         await dispatch(AddBankCampus(formData)).unwrap();
       }
 
+      if (formData.campusId) {
+        dispatch(GetCampusBanksByCampus(formData.campusId));
+      }
+
       const closeBtn = document.querySelector<HTMLButtonElement>(".modal.show .btn-close");
       closeBtn?.click();
     } catch (error: any) {
-      // If your backend handles the duplicate check, catch it here
       toast.error(error?.message || "Operation failed");
     }
   };
 
   return (
-    <div className="modal fade" id={isEditData ? "edit_campus_bank" : "add_campus_bank"}>
+    <div className="modal fade" id="campus_bank_modal">
       <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content">
           <div className="modal-header">
@@ -123,7 +129,7 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
                     <CommonSelect3
                       options={regionsList}
                       onChange={(opt: any) => setRegionId(opt.value)}
-                      value={regionsList.find(r => r.value === regionId)}
+                      value={regionsList.find((r: any) => Number(r.value) === Number(regionId))}
                     />
                   </div>
                 )}
@@ -135,18 +141,28 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
                     <CommonSelect3
                       options={campuses}
                       onChange={(opt: any) => handleSelectChange('campusId', opt)}
-                      value={campuses.find(c => c.value === formData.campusId)}
+                      value={campuses.find((c: any) => Number(c.value) === Number(formData.campusId))}
                     />
                   </div>
                 )}
 
-                {/* Bank/Account Selection */}
+                {/* Bank Selection */}
                 <div className="col-md-12 mb-3">
-                  <label className="form-label">Select Bank Account</label>
+                  <label className="form-label">Select Bank</label>
                   <CommonSelect3
                     options={bankOptions}
                     onChange={(opt: any) => handleSelectChange('bankId', opt)}
-                  // value={bankOptions.find(b => b.value === formData.bankId)}
+                    value={bankOptions.find((b: any) => Number(b.value) === Number(formData.bankId))}
+                  />
+                </div>
+
+                {/* 4th Level Account Head (COA Bank Account) */}
+                <div className="col-md-12 mb-3">
+                  <label className="form-label">Account Head (4th Level Bank)</label>
+                  <CommonSelect3
+                    options={accountOptions}
+                    onChange={(opt: any) => handleSelectChange('accountId', opt)}
+                    value={accountOptions.find((a: any) => Number(a.value) === Number(formData.accountId))}
                   />
                 </div>
 
@@ -172,6 +188,27 @@ const CampusBankModel: React.FC<CampusBankModalProps> = ({ isEditData }) => {
                     onChange={handleInputChange}
                     placeholder="Enter IBAN"
                   />
+                </div>
+
+                <div className="col-md-12 mb-3">
+                  <div className="form-check form-switch d-flex align-items-center">
+                    <input
+                      className="form-check-input me-2"
+                      type="checkbox"
+                      id={`isDefaultForFeeInvoice_${isEditData ? 'edit' : 'add'}`}
+                      name="isDefaultForFeeInvoice"
+                      checked={Boolean(formData.isDefaultForFeeInvoice)}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          isDefaultForFeeInvoice: e.target.checked
+                        }))
+                      }
+                    />
+                    <label className="form-check-label fw-medium cursor-pointer" htmlFor={`isDefaultForFeeInvoice_${isEditData ? 'edit' : 'add'}`}>
+                      Default for Fee Invoice
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

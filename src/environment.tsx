@@ -18,4 +18,11 @@ export const feeTermsConditions = [
   "Fee will not be accepted without PayPro appplication.",
   "Fee will be increased every academic year.",
   "We reserve all legal rights and remedies."
-];
+];
+
+// Financial / Account Head IDs
+export const CashHeadAccountId = Number(process.env.REACT_APP_CASH_HEAD_ACCOUNT_ID || 88);
+export const BankAccountParentId = Number(process.env.REACT_APP_BANK_ACCOUNT_PARENT_ID || 86);
+export const DiscountHeadId = Number(process.env.REACT_APP_DISCOUNT_HEAD_ID || 30);
+export const FeeReceiptHeadId = Number(process.env.REACT_APP_FEE_RECEIPT_HEAD_ID || 88);
+

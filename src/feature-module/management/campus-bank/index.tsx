@@ -83,6 +83,23 @@ const CampusBank = () => {
             dataIndex: ["tblCampus", "name"],
             render: (text: string) => text || "Default Campus",
         },
+        {
+            title: "Default Fee Invoice",
+            dataIndex: "isDefaultForFeeInvoice",
+            sorter: (a: any, b: any) => Number(Boolean(b.isDefaultForFeeInvoice)) - Number(Boolean(a.isDefaultForFeeInvoice)),
+            render: (val: any) => {
+                const isDefault = val === true || val === 1 || val === "true" || val === "1";
+                return isDefault ? (
+                    <span className="badge badge-soft-success d-inline-flex align-items-center">
+                        <i className="ti ti-check me-1" /> Yes
+                    </span>
+                ) : (
+                    <span className="badge badge-soft-secondary d-inline-flex align-items-center">
+                        <i className="ti ti-x me-1" /> No
+                    </span>
+                );
+            },
+        },
         ...(hasPermission?.editRight
             ? [
                 {
@@ -102,7 +119,7 @@ const CampusBank = () => {
                                         className="dropdown-item rounded-1"
                                         to="#"
                                         data-bs-toggle="modal"
-                                        data-bs-target="#edit_campus_bank"
+                                        data-bs-target="#campus_bank_modal"
                                         onClick={() => handleEdit(record)}
                                     >
                                         <i className="ti ti-edit-circle me-2" /> Edit
@@ -136,7 +153,7 @@ const CampusBank = () => {
                                     to="#"
                                     className="btn btn-primary"
                                     data-bs-toggle="modal"
-                                    data-bs-target="#add_campus_bank"
+                                    data-bs-target="#campus_bank_modal"
                                     onClick={() => setSelectedRecord(null)}
                                 >
                                     <i className="ti ti-square-rounded-plus me-2" />

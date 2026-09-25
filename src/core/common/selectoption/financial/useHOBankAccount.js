@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { GetChildAccount } from "../../../../store/apps/ho-coa";
 
+const BANK_ACCOUNT_PARENT_ID = Number(process.env.REACT_APP_BANK_ACCOUNT_PARENT_ID || 86);
+
 export const useHOBankAccount = (campusId) => {
   const dispatch = useDispatch();
 
@@ -17,7 +19,7 @@ export const useHOBankAccount = (campusId) => {
       try {
         const data = await dispatch(
           GetChildAccount({
-            id: 86,
+            id: BANK_ACCOUNT_PARENT_ID,
             campusId: campusId ?? 0
           })
         ).unwrap(); // prevents stale payload

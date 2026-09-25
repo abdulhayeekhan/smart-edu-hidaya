@@ -17,6 +17,10 @@ type SelectProps<T = string | number> = {
   name?: string;
   isDisabled?: boolean;
   placeholder?: string;
+  menuPortalTarget?: HTMLElement | null;
+  menuPosition?: "absolute" | "fixed";
+  menuPlacement?: "auto" | "bottom" | "top";
+  styles?: any;
 };
 
 const CommonSelect3 = <T extends string | number>({
@@ -28,7 +32,11 @@ const CommonSelect3 = <T extends string | number>({
   loading,
   name,
   isDisabled,
-  placeholder
+  placeholder,
+  menuPortalTarget,
+  menuPosition = "fixed",
+  menuPlacement = "auto",
+  styles
 }: SelectProps<T>) => {
 
   // internal state but synced with parent
@@ -55,6 +63,7 @@ const CommonSelect3 = <T extends string | number>({
     onChange?.(option);
   };
 
+  const portalTarget = menuPortalTarget !== undefined ? menuPortalTarget : (typeof document !== "undefined" ? document.body : null);
 
   return (
     <Select
@@ -68,6 +77,13 @@ const CommonSelect3 = <T extends string | number>({
       isDisabled={isDisabled || loading}
       isSearchable={true}
       name={name}
+      menuPortalTarget={portalTarget}
+      menuPosition={menuPosition}
+      menuPlacement={menuPlacement}
+      styles={{
+        menuPortal: (base: any) => ({ ...base, zIndex: 99999 }),
+        ...styles
+      }}
       formatOptionLabel={(option) => option.customLabel || option.label}
     />
   );

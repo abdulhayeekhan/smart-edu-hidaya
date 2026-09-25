@@ -263,44 +263,58 @@ const FeeReceipt = () => {
 
             const data: any = await dispatch(GetInvoiceByNumber({ ...searchInvoice, invoiceNumber: targetInvoiceNumber }))
             const payload = data?.payload;
-            if (payload?.invoiceStatusId === 2) {
-                setSearching(false)
-            } else if (payload) {
-                // 1. Map the API 'details' to your state's 'detail' format
-                const mappedDetails = payload.details.map((item: any) => ({
-                    feeTypeId: item.feeTypeId,
-                    month: item.invoiceMonth,
-                    amountReceived: item.remainingAmount // Mapping remaining to received as requested
-                }));
+            if (payload) {
+                setFormData(payload);
 
-                // 2. Update the searchInvoice state
-                setSearchInvoice((prevState) => ({
-                    ...prevState,
-                    invoiceNumber: payload.invoiceNumber,
-                    detail: mappedDetails
-                }));
+                const normStatus = (payload.status || "").toLowerCase().trim();
+                const isCompleteOrCancel = 
+                    payload.invoiceStatusId === 2 || 
+                    payload.invoiceStatusId === 3 || 
+                    normStatus === "completed" || 
+                    normStatus === "complete" || 
+                    normStatus === "paid" || 
+                    normStatus === "cancel" || 
+                    normStatus === "cancelled" ||
+                    normStatus === "canceled";
 
-                // Fetch Security Deposit
-                try {
-                    const depData: any = await axios.get(`${baseURL}/api/SecurityDeposit/GetDepositDetail/${payload.admissionId}`);
-                    if (depData.data.status && depData.data.data) {
-                        setDepositDetail(depData.data.data);
-                        setSecurityAmountReceived(depData.data.data.amount); // Default to full amount
-                    } else {
+                if (!isCompleteOrCancel) {
+                    // 1. Map the API 'details' to your state's 'detail' format
+                    const mappedDetails = (payload.details || []).map((item: any) => ({
+                        feeTypeId: item.feeTypeId,
+                        feeName: item.feeName,
+                        month: item.invoiceMonth,
+                        amountReceived: item.remainingAmount // Mapping remaining to received as requested
+                    }));
+
+                    // 2. Update the searchInvoice state
+                    setSearchInvoice((prevState) => ({
+                        ...prevState,
+                        invoiceNumber: payload.invoiceNumber,
+                        detail: mappedDetails
+                    }));
+
+                    // Fetch Security Deposit
+                    try {
+                        const depData: any = await axios.get(`${baseURL}/api/SecurityDeposit/GetDepositDetail/${payload.admissionId}`);
+                        if (depData.data.status && depData.data.data) {
+                            setDepositDetail(depData.data.data);
+                            setSecurityAmountReceived(depData.data.data.amount); // Default to full amount
+                        } else {
+                            setDepositDetail(null);
+                            setSecurityAmountReceived(0);
+                        }
+                    } catch (err) {
+                        console.error("Error fetching deposit:", err);
                         setDepositDetail(null);
                         setSecurityAmountReceived(0);
                     }
-                } catch (err) {
-                    console.error("Error fetching deposit:", err);
+                } else {
                     setDepositDetail(null);
                     setSecurityAmountReceived(0);
                 }
-
-                // If you still need to set the general form data
-                setFormData(payload);
                 setSearching(false);
             } else {
-                setSearching(false)
+                setSearching(false);
             }
         } catch (error) {
             toast.error("Failed to fetch invoice data. Please check the voucher number and try again.");
@@ -504,10 +518,11 @@ const FeeReceipt = () => {
         toast.dismiss();
     };
 
-
-
-
-
+    const normStatus = (formData?.status || "").toLowerCase().trim();
+    const isCompleted = formData?.invoiceStatusId === 2 || ["completed", "complete", "paid"].includes(normStatus);
+    const isCancelled = formData?.invoiceStatusId === 3 || ["cancel", "cancelled", "canceled"].includes(normStatus);
+    const isPartial = formData?.invoiceStatusId === 4 || ["partial", "partially paid"].includes(normStatus);
+    const isCompleteOrCancel = isCompleted || isCancelled;
 
     return (
         <div className="page-wrapper">
@@ -619,13 +634,8 @@ const FeeReceipt = () => {
                                                 />
                                             </div>
                                             <div className="col-md-8 col-lg-8">
-                                                <label className="form-label fw-semibold text-dark fs-13 mb-1 d-flex align-items-center justify-content-between">
-                                                    <span><i className="ti ti-user-circle text-primary me-1" /> Student (Admission)</span>
-                                                    {studentOptions && studentOptions.length > 1 && (
-                                                        <span className="badge bg-primary-subtle text-primary fw-medium fs-11">
-                                                            {studentOptions.length - 1} Students Found
-                                                        </span>
-                                                    )}
+                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                    <i className="ti ti-user-circle text-primary me-1" /> Student (Admission)
                                                 </label>
                                                 <CommonSelect3
                                                     className="select"
@@ -748,9 +758,23 @@ const FeeReceipt = () => {
                                         <h5 className="card-title mb-0 d-flex align-items-center text-dark fw-bold">
                                             <i className="ti ti-id-badge-2 text-primary me-2 fs-18" /> Student & Invoice Summary
                                         </h5>
-                                        <span className={`badge px-3 py-2 fs-12 ${formData?.status?.toLowerCase() === 'paid' ? 'bg-success text-white' : 'bg-warning text-dark'}`}>
-                                            <i className="ti ti-point-filled me-1" /> {formData?.status || 'Pending'}
-                                        </span>
+                                        {isCompleted ? (
+                                            <span className="badge bg-success text-white px-3 py-2 fs-12">
+                                                <i className="ti ti-circle-check me-1" /> {formData?.status || 'Completed'}
+                                            </span>
+                                        ) : isCancelled ? (
+                                            <span className="badge bg-danger text-white px-3 py-2 fs-12">
+                                                <i className="ti ti-circle-x me-1" /> {formData?.status || 'Cancelled'}
+                                            </span>
+                                        ) : isPartial ? (
+                                            <span className="badge bg-info text-white px-3 py-2 fs-12">
+                                                <i className="ti ti-clock-pause me-1" /> {formData?.status || 'Partial'}
+                                            </span>
+                                        ) : (
+                                            <span className="badge bg-warning text-dark px-3 py-2 fs-12">
+                                                <i className="ti ti-clock me-1" /> {formData?.status || 'Pending'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="card-body p-4">
                                         <div className="row g-3">
@@ -805,147 +829,178 @@ const FeeReceipt = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="card shadow-sm mb-4">
-                                    <div className="card-body">
-                                        <div className="table-responsive">
-                                            <table className="table table-bordered table-striped align-middle">
-                                                <thead className="table-light">
-                                                    <tr>
-                                                        <th>Fee Type</th>
-                                                        <th>Invoice Amount</th>
-                                                        <th>Discount</th>
-                                                        <th>Balance</th>
-                                                        <th style={{ width: '200px' }}>Receipt Amount</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {formData?.details?.map(item => {
-                                                        // Find the corresponding state entry for this specific fee type AND month
-                                                        const stateDetail = searchInvoice?.detail?.find(d => d.feeTypeId === item.feeTypeId && d.month === item.invoiceMonth);
-                                                        return (
-                                                            <tr key={item?.id}>
-                                                                <td><strong>{item?.feeName}</strong> <small>({dayjs(item?.invoiceMonth).format("MMM-YYYY")})</small></td>
-                                                                <td>{item?.invoiceAmount}</td>
-                                                                <td>{item?.discountAmount}</td>
-                                                                <td>{item?.remainingAmount}</td>
-                                                                <td>
-                                                                    <input
-                                                                        type="number"
-                                                                        className="form-control form-control-sm"
-                                                                        // Show the value from searchInvoice state
-                                                                        value={stateDetail?.amountReceived !== undefined && stateDetail?.amountReceived !== null ? stateDetail.amountReceived : ""}
-                                                                        onChange={(e) => handleReceiptChange(e, item.feeTypeId, item.invoiceMonth, item.remainingAmount)}
-                                                                        placeholder="RECEIPT AMOUNT"
-                                                                    />
-                                                                </td>
+
+                                {isCompleted && (
+                                    <div className="alert alert-success d-flex align-items-center mb-4 p-3 shadow-sm border-0 rounded-3">
+                                        <i className="ti ti-circle-check fs-24 me-3 text-success" />
+                                        <div>
+                                            <h6 className="alert-heading mb-1 fw-bold text-success">Invoice Already Completed / Paid</h6>
+                                            <p className="mb-0 fs-13 text-muted">
+                                                This invoice has already been fully paid. No further payment receipts are required for this voucher.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isCancelled && (
+                                    <div className="alert alert-danger d-flex align-items-center mb-4 p-3 shadow-sm border-0 rounded-3">
+                                        <i className="ti ti-alert-triangle fs-24 me-3 text-danger" />
+                                        <div>
+                                            <h6 className="alert-heading mb-1 fw-bold text-danger">Invoice Cancelled</h6>
+                                            <p className="mb-0 fs-13 text-muted">
+                                                This invoice is marked as Cancelled. Receipts cannot be processed for cancelled vouchers.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!isCompleteOrCancel && (
+                                    <>
+                                        <div className="card shadow-sm mb-4">
+                                            <div className="card-body">
+                                                <div className="table-responsive">
+                                                    <table className="table table-bordered table-striped align-middle">
+                                                        <thead className="table-light">
+                                                            <tr>
+                                                                <th>Fee Type</th>
+                                                                <th>Invoice Amount</th>
+                                                                <th>Discount</th>
+                                                                <th>Balance</th>
+                                                                <th style={{ width: '200px' }}>Receipt Amount</th>
                                                             </tr>
-                                                        )
-                                                    }
-                                                    )}
-                                                    {depositDetail && depositDetail.amount > 0 && (
-                                                        <tr>
-                                                            <td><strong>Security</strong></td>
-                                                            <td>{depositDetail.amount}</td>
-                                                            <td>0</td>
-                                                            <td>{depositDetail.amount}</td>
-                                                            <td>
-                                                                <div className="form-check form-switch">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        className="form-check-input"
-                                                                        style={{ cursor: 'pointer' }}
-                                                                        checked={securityAmountReceived === depositDetail.amount}
-                                                                        onChange={(e) => {
-                                                                            setSecurityAmountReceived(e.target.checked ? depositDetail.amount : 0);
-                                                                        }}
-                                                                    />
-                                                                    <label className="form-check-label">
-                                                                        {securityAmountReceived === depositDetail.amount ? "Full Amount" : "Pay Full"}
-                                                                    </label>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                                <tfoot className="table-dark">
-                                                    <tr>
-                                                        <td colSpan={3} className="text-end"><strong>TOTAL AMOUNT</strong></td>
-                                                        <td>{formData?.netAmount + (depositDetail?.amount || 0)}</td>
-                                                        <td><strong>{totalReceived}</strong></td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="card shadow-sm border-0 mb-4 overflow-hidden">
-                                    <div className="card-header bg-white py-3 border-bottom d-flex align-items-center">
-                                        <h5 className="card-title mb-0 fw-bold text-dark d-flex align-items-center">
-                                            <i className="ti ti-wallet text-primary me-2 fs-18" /> Payment Details
-                                        </h5>
-                                    </div>
-                                    <div className="card-body p-4">
-                                        <div className="row g-3">
-                                            <div className="col-md-6">
-                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                                                    <i className="ti ti-building-bank text-primary me-1" /> Deposit Account (Bank / Cash) <span className="text-danger">*</span>
-                                                </label>
-                                                <CommonSelect3
-                                                    className="select"
-                                                    options={combinedOptions}
-                                                    onChange={(option) => handleSelectChanges('receiptAccount', option)}
-                                                    value={
-                                                        searchInvoice?.receiptAccount
-                                                            ? combinedOptions.find(r => Number(r?.value) === Number(searchInvoice?.receiptAccount))
-                                                            : combinedOptions[0]
-                                                    }
-                                                    placeholder="Select Deposit Bank or Cash Account"
-                                                />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label fw-semibold text-dark fs-13 mb-1">
-                                                    <i className="ti ti-receipt-2 text-primary me-1" /> Transaction Reference No
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    onChange={e => handleChange('referenceNo', e.target.value)}
-                                                    name="referenceNo"
-                                                    placeholder="e.g. Bank slip # / Cheque # / Online Txn ID"
-                                                />
+                                                        </thead>
+                                                        <tbody>
+                                                            {formData?.details?.map(item => {
+                                                                // Find the corresponding state entry for this specific fee type AND month
+                                                                const stateDetail = searchInvoice?.detail?.find(d => d.feeTypeId === item.feeTypeId && d.month === item.invoiceMonth);
+                                                                return (
+                                                                    <tr key={item?.id}>
+                                                                        <td><strong>{item?.feeName}</strong> <small>({dayjs(item?.invoiceMonth).format("MMM-YYYY")})</small></td>
+                                                                        <td>{item?.invoiceAmount}</td>
+                                                                        <td>{item?.discountAmount}</td>
+                                                                        <td>{item?.remainingAmount}</td>
+                                                                        <td>
+                                                                            <input
+                                                                                type="number"
+                                                                                className="form-control form-control-sm"
+                                                                                // Show the value from searchInvoice state
+                                                                                value={stateDetail?.amountReceived !== undefined && stateDetail?.amountReceived !== null ? stateDetail.amountReceived : ""}
+                                                                                onChange={(e) => handleReceiptChange(e, item.feeTypeId, item.invoiceMonth, item.remainingAmount)}
+                                                                                placeholder="RECEIPT AMOUNT"
+                                                                            />
+                                                                        </td>
+                                                                    </tr>
+                                                                )
+                                                            }
+                                                            )}
+                                                            {depositDetail && depositDetail.amount > 0 && (
+                                                                <tr>
+                                                                    <td><strong>Security</strong></td>
+                                                                    <td>{depositDetail.amount}</td>
+                                                                    <td>0</td>
+                                                                    <td>{depositDetail.amount}</td>
+                                                                    <td>
+                                                                        <div className="form-check form-switch">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="form-check-input"
+                                                                                style={{ cursor: 'pointer' }}
+                                                                                checked={securityAmountReceived === depositDetail.amount}
+                                                                                onChange={(e) => {
+                                                                                    setSecurityAmountReceived(e.target.checked ? depositDetail.amount : 0);
+                                                                                }}
+                                                                            />
+                                                                            <label className="form-check-label">
+                                                                                {securityAmountReceived === depositDetail.amount ? "Full Amount" : "Pay Full"}
+                                                                            </label>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                        <tfoot className="table-dark">
+                                                            <tr>
+                                                                <td colSpan={3} className="text-end"><strong>TOTAL AMOUNT</strong></td>
+                                                                <td>{formData?.netAmount + (depositDetail?.amount || 0)}</td>
+                                                                <td><strong>{totalReceived}</strong></td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
+
+                                        <div className="card shadow-sm border-0 mb-4">
+                                            <div className="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                                                <h5 className="card-title mb-0 fw-bold text-dark d-flex align-items-center">
+                                                    <i className="ti ti-wallet text-primary me-2 fs-18" /> Payment Details
+                                                </h5>
+                                            </div>
+                                            <div className="card-body p-4">
+                                                <div className="row g-3">
+                                                    <div className="col-md-6">
+                                                        <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                            <i className="ti ti-building-bank text-primary me-1" /> Deposit Account (Bank / Cash) <span className="text-danger">*</span>
+                                                        </label>
+                                                        <CommonSelect3
+                                                            className="select"
+                                                            options={combinedOptions}
+                                                            onChange={(option) => handleSelectChanges('receiptAccount', option)}
+                                                            value={
+                                                                searchInvoice?.receiptAccount
+                                                                    ? combinedOptions.find(r => Number(r?.value) === Number(searchInvoice?.receiptAccount))
+                                                                    : combinedOptions[0]
+                                                            }
+                                                            placeholder="Select Deposit Bank or Cash Account"
+                                                        />
+                                                    </div>
+                                                    <div className="col-md-6">
+                                                        <label className="form-label fw-semibold text-dark fs-13 mb-1">
+                                                            <i className="ti ti-receipt-2 text-primary me-1" /> Transaction Reference No
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            className="form-control"
+                                                            onChange={e => handleChange('referenceNo', e.target.value)}
+                                                            name="referenceNo"
+                                                            placeholder="e.g. Bank slip # / Cheque # / Online Txn ID"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
-                            <div className="col-md-12 text-end mt-4">
-                                <button
-                                    type="button"
-                                    className="btn btn-light me-2"
-                                    onClick={handleCancel}
-                                    disabled={isActionLoading}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-success"
-                                    onClick={handleSaveReceipt}
-                                    disabled={isActionLoading || totalReceived === 0}
-                                >
-                                    {isActionLoading ? (
-                                        <><span className="spinner-border spinner-border-sm me-2" /> Saving...</>
-                                    ) : (
-                                        'Save Receipt'
-                                    )}
-                                </button>
-                            </div>
+                            {!isCompleteOrCancel && (
+                                <div className="col-md-12 text-end mt-4">
+                                    <button
+                                        type="button"
+                                        className="btn btn-light me-2"
+                                        onClick={handleCancel}
+                                        disabled={isActionLoading}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-success"
+                                        onClick={handleSaveReceipt}
+                                        disabled={isActionLoading || totalReceived === 0}
+                                    >
+                                        {isActionLoading ? (
+                                            <><span className="spinner-border spinner-border-sm me-2" /> Saving...</>
+                                        ) : (
+                                            'Save Receipt'
+                                        )}
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
-            </div >
+            </div>
         </div>
     );
 };

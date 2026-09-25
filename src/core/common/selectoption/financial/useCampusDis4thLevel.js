@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useContext, createContext } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { GetChildAccount } from '../../../../store/apps/campus-coa';
 
+const DISCOUNT_HEAD_ID = Number(process.env.REACT_APP_DISCOUNT_HEAD_ID || 30);
+
 export const useCampusDis4thLevel = () => {
   const dispatch = useDispatch();
 
@@ -17,7 +19,7 @@ export const useCampusDis4thLevel = () => {
       try {
         const data = await dispatch(
           GetChildAccount({
-            id: 30
+            id: DISCOUNT_HEAD_ID
           })
         ).unwrap(); // prevents stale payload
 
