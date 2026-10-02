@@ -130,6 +130,13 @@ const SECTIONS: HubSection[] = [
         icon: "ti ti-book",
         description: "Chart of accounts ledgers and balances",
       },
+      {
+        label: "Student Ledger Report",
+        moduleName: "Student Ledger Report",
+        link: routes.studentLedgerReport,
+        icon: "ti ti-report",
+        description: "Complete fee and payment ledger for a single student",
+      },
     ],
   },
   {

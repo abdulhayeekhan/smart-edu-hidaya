@@ -146,7 +146,12 @@ import StaffPayRoll from "../hrm/staff-list/staff-payroll.tsx";
 import StaffLeave from "../hrm/staff-list/staff-leave";
 import AppCampusEmployee from "../hrm/campus-employee/index";
 import AddCampusEmployee from "../hrm/campus-employee/addCampusEmployee";
+import EmployeeProfile from "../hrm/campus-employee/employeeProfile";
 import ApproveRequest from "../hrm/leaves/approve-request";
+import SalaryPayrollList from "../hrm/salary-payroll/index";
+import SalaryPayrollProcess from "../hrm/salary-payroll/SalaryPayrollProcess";
+import AllowanceTypes from "../hrm/allowance-type";
+import Deductions from "../hrm/deduction";
 import TeacherList from "../peoples/teacher/teacher-list";
 import TeacherDetails from "../peoples/teacher/teacher-details/teacherDetails";
 import TeachersRoutine from "../peoples/teacher/teacher-details/teachersRoutine";
@@ -263,6 +268,9 @@ import DefaulterReport from "../report/defaulter-report";
 import ClassReport from "../report/class-report/classReport";
 import AttendanceReport from "../report/attendance-report/attendanceReport";
 import Reports from "../report";
+import EmployeeLedgerReport from "../report/employee-ledger-report";
+import SalaryReport from "../report/salary-report";
+import StudentLedgerReport from "../report/student-ledger-report/studentLedgerReport";
 import ContactMessages from "../support/contactMessages";
 import Events from "../announcements/events";
 import Profile from "../pages/profile";
@@ -1073,6 +1081,10 @@ export const publicRoutes = [
     element: <AddCampusEmployee />,
   },
   {
+    path: routes.campusEmployeeProfile,
+    element: <EmployeeProfile />,
+  },
+  {
     path: routes.listLeaves,
     element: <ListLeaves />,
   },
@@ -1087,6 +1099,22 @@ export const publicRoutes = [
   {
     path: routes.staffLeave,
     element: <StaffLeave />,
+  },
+  {
+    path: routes.salaryPayroll,
+    element: <SalaryPayrollList />,
+  },
+  {
+    path: routes.salaryPayrollProcess,
+    element: <SalaryPayrollProcess />,
+  },
+  {
+    path: routes.allowanceTypes,
+    element: <AllowanceTypes />,
+  },
+  {
+    path: routes.deductions,
+    element: <Deductions />,
   },
 
   {
@@ -1625,6 +1653,18 @@ export const publicRoutes = [
   {
     path: routes.reports,
     element: <Reports />,
+  },
+  {
+    path: routes.employeeLedgerReport,
+    element: <EmployeeLedgerReport />,
+  },
+  {
+    path: routes.salaryReport,
+    element: <SalaryReport />,
+  },
+  {
+    path: routes.studentLedgerReport,
+    element: <StudentLedgerReport />,
   },
   {
     path: routes.settings,

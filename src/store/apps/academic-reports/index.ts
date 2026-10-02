@@ -36,6 +36,7 @@ export interface StudentLedgerDetail {
   date: string;
   voucherNumber: string;
   voucherType: string;
+  entryType?: string;
   description: string;
   debit: number;
   credit: number;

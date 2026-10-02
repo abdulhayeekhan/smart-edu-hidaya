@@ -172,6 +172,12 @@ const Permission = () => {
       if (!modulesData.find((m: any) => m.moduleName === "Defaulter Report")) {
          missingModules.push({ name: "Defaulter Report", moduleName: "Defaulter Report", hasViewRight: true, hasAddRight: true, hasEditRight: true, hasDeleteRight: true, isEnabled: true });
       }
+      if (!modulesData.find((m: any) => m.moduleName === "Collection Report")) {
+         missingModules.push({ name: "Collection Report", moduleName: "Collection Report", hasViewRight: true, hasAddRight: true, hasEditRight: true, hasDeleteRight: true, isEnabled: true });
+      }
+      if (!modulesData.find((m: any) => m.moduleName === "Salary Payroll")) {
+         missingModules.push({ name: "Salary Payroll", moduleName: "Salary Payroll", hasViewRight: true, hasAddRight: true, hasEditRight: true, hasDeleteRight: true, isEnabled: true });
+      }
 
       if (missingModules.length > 0) {
          for (const mod of missingModules) {

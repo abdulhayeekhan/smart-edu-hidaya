@@ -10,13 +10,11 @@ import { useCampusesList } from "../../../core/common/selectoption/master/useCam
 // import CampusEmployeeModal from "./CampusEmployeeModal";
 import { GetAllEmployees, DeleteEmployee, UpdateEmployeeStatus } from "../../../store/apps/campus-employee";
 import TooltipOption from "../../../core/common/tooltipOption";
-import { exportToPDF, exportToExcel } from "../../../core/common/exportUtils";
+import { exportToPDF } from "../../../core/common/exportUtils";
 import { usePermission } from "../../../core/common/selectoption/selectoption";
 import { GetSingleUser, UpdateUser } from "../../../store/apps/account";
 import AddCredentialModal from "./AddCredentialModal";
-import ImageWithBasePath from "../../../core/common/imageWithBasePath";
 import axios from "axios";
-import dayjs from "dayjs";
 
 const baseURL = process.env.REACT_APP_API_BASE_URL;
 
@@ -35,11 +33,12 @@ const AppCampusEmployee = () => {
   const [regionId, setRegionId] = useState<number>(loginInfo?.userLevel === 2 ? loginInfo?.userLevelId : 0);
   const campuses = useCampusesList(loginInfo?.userLevel === 2 ? loginInfo?.userLevelId : regionId);
   const [campusId, setCampusId] = useState<number | null>(loginInfo?.userLevel === 3 ? loginInfo?.userLevelId : null);
+
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchText, setSearchText] = useState("");
   const [isActiveFilter, setIsActiveFilter] = useState<string | null>(null);
-  const [genderFilter, setGenderFilter] = useState<number | null>(null);
+  const [usernamesMap, setUsernamesMap] = useState<Record<number, string>>({});
 
   const statusOptions = [
     { value: 'all', label: "All Status" },
@@ -47,13 +46,30 @@ const AppCampusEmployee = () => {
     { value: 'false', label: "Inactive" }
   ];
 
-  const genderOptions = [
-    { value: 0, label: "All Gender" },
-    { value: 1, label: "Male" },
-    { value: 2, label: "Female" },
-  ];
-
   const { data, loading, totalCount } = useSelector((state: RootState) => state.campusEmployee);
+
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+
+    const userIdsToFetch = data
+      .map((emp) => emp.userId)
+      .filter((uid): uid is number => !!uid && uid > 0 && !usernamesMap[uid]);
+
+    if (userIdsToFetch.length === 0) return;
+
+    const uniqueIds = Array.from(new Set(userIdsToFetch));
+    uniqueIds.forEach(async (uid) => {
+      try {
+        const res = await axios.get(`${baseURL}/api/Account/GetUser?userId=${uid}`);
+        const userObj = res.data?.data || res.data;
+        if (userObj?.username) {
+          setUsernamesMap((prev) => ({ ...prev, [uid]: userObj.username }));
+        }
+      } catch (err) {
+        // silent fallback
+      }
+    });
+  }, [data]);
 
   const fetchEmployees = () => {
     dispatch(
@@ -65,7 +81,7 @@ const AppCampusEmployee = () => {
         departmentId: null,
         designationId: null,
         employeeTypeId: null,
-        gender: genderFilter === 0 ? null : genderFilter,
+        gender: null,
         isActive: isActiveFilter === 'true' ? true : isActiveFilter === 'false' ? false : null,
         joiningDateFrom: "",
         joiningDateTo: "",
@@ -75,7 +91,7 @@ const AppCampusEmployee = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [pageNo, pageSize, searchText, campusId, isActiveFilter, genderFilter, dispatch]);
+  }, [pageNo, pageSize, searchText, campusId, isActiveFilter, dispatch]);
 
   const handleTableChange = (pagination: any) => {
     setPageNo(pagination.current);
@@ -93,6 +109,10 @@ const AppCampusEmployee = () => {
 
   const handleEdit = (id: number) => {
     navigate(routes.editCampusEmployee.replace(":id", id.toString()));
+  };
+
+  const handleProfile = (id: number) => {
+    navigate(routes.campusEmployeeProfile.replace(":id", id.toString()));
   };
 
   const handleDeleteSubmit = async (e: React.FormEvent) => {
@@ -128,107 +148,8 @@ const AppCampusEmployee = () => {
     }
   };
 
-  const handleExportPDF = async () => {
-    try {
-      const resp = await axios.post(`${baseURL}/api/HREmployee/GetAll`, {
-        pageNo: 1,
-        pageSize: 50000,
-        search: searchText,
-        campusId: campusId,
-        departmentId: null,
-        designationId: null,
-        employeeTypeId: null,
-        gender: genderFilter === 0 ? null : genderFilter,
-        isActive: isActiveFilter === 'true' ? true : isActiveFilter === 'false' ? false : null,
-        joiningDateFrom: "",
-        joiningDateTo: "",
-      });
-      const exportData = (resp.data && resp.data.data) ? resp.data.data : (data || []);
-      exportToPDF("Campus Staff List", columns as any, exportData);
-    } catch (e) {
-      exportToPDF("Campus Staff List", columns as any, data);
-    }
-  };
-
-  const handleExportExcel = async () => {
-    try {
-      const resp = await axios.post(`${baseURL}/api/HREmployee/GetAll`, {
-        pageNo: 1,
-        pageSize: 50000,
-        search: searchText,
-        campusId: campusId,
-        departmentId: null,
-        designationId: null,
-        employeeTypeId: null,
-        gender: genderFilter === 0 ? null : genderFilter,
-        isActive: isActiveFilter === 'true' ? true : isActiveFilter === 'false' ? false : null,
-        joiningDateFrom: "",
-        joiningDateTo: "",
-      });
-
-      const exportData = (resp.data && resp.data.data) ? resp.data.data : (data || []);
-
-      const excelColumns = [
-        {
-          title: "S.No",
-          dataIndex: "id",
-          render: (_: any, __: any, index: number) => index + 1
-        },
-        { title: "Campus", dataIndex: "campusName" },
-        { title: "Employee ID", dataIndex: "employeeKey" },
-        {
-          title: "Full Name",
-          dataIndex: "firstName",
-          render: (_: any, r: any) => [r?.firstName, r?.middleName, r?.lastName].filter(Boolean).join(" ")
-        },
-        { title: "Father's Name", dataIndex: "fatherName" },
-        {
-          title: "Gender",
-          dataIndex: "gender",
-          render: (g: any) => g === 1 ? "Male" : g === 2 ? "Female" : ""
-        },
-        {
-          title: "Date of Birth",
-          dataIndex: "dob",
-          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
-        },
-        { title: "CNIC", dataIndex: "cnic" },
-        { title: "Email", dataIndex: "email" },
-        { title: "Contact Number", dataIndex: "contactNumber" },
-        { title: "Designation", dataIndex: "designationName" },
-        { title: "Department", dataIndex: "departmentName" },
-        { title: "Employee Type", dataIndex: "employeeTypeName" },
-        {
-          title: "Joining Date",
-          dataIndex: "joiningDate",
-          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
-        },
-        {
-          title: "Confirmation Date",
-          dataIndex: "confirmationDate",
-          render: (val: any) => val ? dayjs(val).format("YYYY-MM-DD") : ""
-        },
-        {
-          title: "Marital Status",
-          dataIndex: "martialStatus",
-          render: (m: any) => m === 1 ? "Single" : m === 2 ? "Married" : m === 3 ? "Divorced" : m === 4 ? "Widowed" : ""
-        },
-        { title: "Religion", dataIndex: "religionName" },
-        { title: "EOBI", dataIndex: "eobi" },
-        { title: "Payment Mode", dataIndex: "paymentMode" },
-        { title: "Account Title", dataIndex: "accountTitle" },
-        { title: "Account Number", dataIndex: "accountNumber" },
-        {
-          title: "Status",
-          dataIndex: "isActive",
-          render: (active: any) => active ? "Active" : "Inactive"
-        }
-      ];
-
-      exportToExcel("Campus Staff List", excelColumns as any, exportData);
-    } catch (e) {
-      exportToExcel("Campus Staff List", columns as any, data);
-    }
+  const handleExportPDF = () => {
+    exportToPDF("Campus Employees", columns as any, data);
   };
 
   const columns = [
@@ -236,33 +157,55 @@ const AppCampusEmployee = () => {
       title: "Employee ID",
       dataIndex: "employeeKey",
       key: "employeeKey",
+      render: (text: string, record: any) => (
+        <Link
+          to={routes.campusEmployeeProfile.replace(":id", record.id?.toString())}
+          className="link-primary fw-medium"
+        >
+          {text || "—"}
+        </Link>
+      ),
     },
     {
       title: "Name",
       dataIndex: "firstName",
       key: "name",
-      render: (text: string, record: any) => (
-        <div className="d-flex align-items-center">
-          <div className="avatar avatar-md me-2 flex-shrink-0">
-            <ImageWithBasePath
-              src={
-                record.imageUrl
-                  ? record.imageUrl.startsWith("http")
-                    ? record.imageUrl
-                    : `${baseURL}/${record.imageUrl}`
-                  : "assets/img/profiles/avatar-02.jpg"
-              }
-              className="img-fluid rounded-circle"
-              alt="avatar"
-            />
+      render: (text: string, record: any) => {
+        const fullName = `${record.firstName || ""} ${record.middleName || ""} ${record.lastName || ""}`.trim();
+        const imgSrc = record.imageUrl
+          ? record.imageUrl.startsWith("http")
+            ? record.imageUrl
+            : `${baseURL}/${record.imageUrl.replace(/\\/g, "/")}`
+          : "/assets/img/profiles/avatar-01.jpg";
+
+        return (
+          <div className="d-flex align-items-center">
+            <Link
+              to={routes.campusEmployeeProfile.replace(":id", record.id?.toString())}
+              className="avatar avatar-md me-2 flex-shrink-0 rounded-circle overflow-hidden bg-light border"
+              style={{ width: 36, height: 36 }}
+            >
+              <img
+                src={imgSrc}
+                alt={fullName}
+                className="img-fluid"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e: any) => {
+                  e.currentTarget.src = "/assets/img/profiles/avatar-01.jpg";
+                }}
+              />
+            </Link>
+            <div>
+              <Link
+                to={routes.campusEmployeeProfile.replace(":id", record.id?.toString())}
+                className="fw-medium text-dark d-block"
+              >
+                {fullName}
+              </Link>
+            </div>
           </div>
-          <div>
-            <span className="text-dark fw-medium d-block">
-              {`${record.firstName || ""} ${record.middleName || ""} ${record.lastName || ""}`.trim()}
-            </span>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       title: "Designation",
@@ -292,13 +235,21 @@ const AppCampusEmployee = () => {
       title: "Credentials Created",
       dataIndex: "userId",
       key: "userId",
-      render: (userId: any) => (
-        userId ? (
-          <i className="ti ti-check text-success fs-20" />
+      render: (userId: any, record: any) => {
+        const username = userId ? usernamesMap[userId] || record.userName || null : null;
+        return userId ? (
+          <div>
+            <span className="badge badge-soft-success d-inline-flex align-items-center px-2 py-1 fs-12">
+              <i className="ti ti-user-check me-1 fs-14" />
+              {username || `User ID: ${userId}`}
+            </span>
+          </div>
         ) : (
-          <i className="ti ti-x text-danger fs-20" />
-        )
-      ),
+          <span className="badge badge-soft-danger d-inline-flex align-items-center px-2 py-1 fs-12">
+            <i className="ti ti-user-x me-1 fs-14" /> Not Created
+          </span>
+        );
+      },
     },
     {
       title: "Status",
@@ -322,28 +273,23 @@ const AppCampusEmployee = () => {
       key: "action",
       render: (_: any, record: any) => (
         <div className="d-flex align-items-center">
-          {hasPermission?.editRight && (
-            <Tooltip title={record.isActive ? "Edit" : "Enable employee to edit"}>
-              <Link
-                to="#"
-                className={`btn btn-icon btn-sm btn-soft-info rounded-pill ${!record.isActive ? 'disabled' : ''}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (record.isActive) {
-                    handleEdit(record.id);
-                  }
-                }}
-                style={!record.isActive ? { pointerEvents: 'none', opacity: 0.5 } : {}}
-              >
-                <i className="feather-edit" />
-              </Link>
-            </Tooltip>
-          )}
+          <Tooltip title="View Details">
+            <Link
+              to="#"
+              className="btn btn-icon btn-sm btn-soft-primary rounded-pill me-2"
+              onClick={(e) => {
+                e.preventDefault();
+                handleProfile(record.id);
+              }}
+            >
+              <i className="ti ti-eye fs-16" />
+            </Link>
+          </Tooltip>
           {!record.userId && hasPermission?.editRight && (
-            <Tooltip title="Add Credential">
+            <Tooltip title={record.isActive ? "Create Credentials" : "Enable employee to create credentials"}>
               <Link
                 to="#"
-                className={`btn btn-icon btn-sm btn-soft-warning rounded-pill ms-2 ${!record.isActive ? 'disabled' : ''}`}
+                className={`btn btn-icon btn-sm btn-soft-success rounded-pill ${!record.isActive ? 'disabled' : ''}`}
                 onClick={(e) => {
                   e.preventDefault();
                   if (record.isActive) {
@@ -353,7 +299,7 @@ const AppCampusEmployee = () => {
                 }}
                 style={!record.isActive ? { pointerEvents: 'none', opacity: 0.5 } : {}}
               >
-                <i className="feather-key" />
+                <i className="ti ti-key fs-16" />
               </Link>
             </Tooltip>
           )}
@@ -386,7 +332,6 @@ const AppCampusEmployee = () => {
             <div className="d-flex my-xl-auto right-content align-items-center flex-wrap">
               <TooltipOption 
                 onExportPDF={handleExportPDF} 
-                onExportExcel={handleExportExcel}
                 onRefresh={fetchEmployees} 
                 onPrint={() => window.print()} 
               />
@@ -430,15 +375,6 @@ const AppCampusEmployee = () => {
                     />
                   </div>
                 ) : null}
-                <div className="me-3 mb-2" style={{ minWidth: "150px" }}>
-                  <CommonSelect3
-                    options={genderOptions}
-                    name="gender"
-                    value={genderOptions.find((o) => o.value === (genderFilter ?? 0)) || genderOptions[0]}
-                    onChange={(opt) => setGenderFilter(Number(opt?.value) || null)}
-                    placeholder="Select Gender"
-                  />
-                </div>
                 <div className="me-3 mb-2" style={{ minWidth: "150px" }}>
                   <CommonSelect3
                     options={statusOptions}

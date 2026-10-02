@@ -153,7 +153,22 @@ export const AddEmployee = createAsyncThunk<Employee, Partial<Employee>>(
         return rejectWithValue(res.message);
       }
     } catch (error: any) {
-      toast.error('Error adding employee');
+      let errorMsg = 'Error adding employee';
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.response.data.errors) {
+          const firstErrorKey = Object.keys(error.response.data.errors)[0];
+          if (firstErrorKey && error.response.data.errors[firstErrorKey].length > 0) {
+            errorMsg = error.response.data.errors[firstErrorKey][0];
+          }
+        }
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      toast.error(errorMsg);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -173,7 +188,22 @@ export const UpdateEmployee = createAsyncThunk<Employee, Partial<Employee>>(
         return rejectWithValue(res.message);
       }
     } catch (error: any) {
-      toast.error('Error updating employee');
+      let errorMsg = 'Error updating employee';
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errorMsg = error.response.data.message;
+        } else if (error.response.data.errors) {
+          const firstErrorKey = Object.keys(error.response.data.errors)[0];
+          if (firstErrorKey && error.response.data.errors[firstErrorKey].length > 0) {
+            errorMsg = error.response.data.errors[firstErrorKey][0];
+          }
+        }
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      toast.error(errorMsg);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -236,58 +266,53 @@ export const GenerateEmployeeKey = createAsyncThunk<string, number>(
   }
 );
 
-export const UploadProfileImage = createAsyncThunk<string, { employeeId?: number | null; file: File | Blob }>(
-  'campusEmployee/uploadProfileImage',
-  async ({ employeeId, file }, { rejectWithValue }) => {
+export const UploadEmployeeImage = createAsyncThunk<string, { file: Blob | File; fileName?: string } | Blob | File>(
+  'campusEmployee/uploadImage',
+  async (payload, { rejectWithValue }) => {
     try {
       const formData = new FormData();
-      if (employeeId) {
-        formData.append('employeeId', employeeId.toString());
-      }
-      formData.append('file', file);
+      let fileData: Blob | File;
+      let fileName = 'employee_profile.jpg';
 
-      const response = await axios.post(`${baseURL}/api/HREmployee/UploadProfileImage`, formData);
+      if (payload instanceof File) {
+        fileData = payload;
+        fileName = payload.name;
+      } else if (payload && typeof payload === 'object' && 'file' in payload) {
+        fileData = (payload as any).file;
+        fileName = (payload as any).fileName || ((payload as any).file?.name) || 'employee_profile.jpg';
+      } else {
+        fileData = payload as Blob;
+      }
+
+      // Ensure fileName has a valid image extension
+      if (!fileName || !fileName.includes('.')) {
+        fileName = `${fileName || 'employee_image'}.jpg`;
+      }
+
+      formData.append('file', fileData, fileName);
+
+      const response = await axios.post(`${baseURL}/api/HREmployee/UploadImage`, formData);
       const res = response.data;
-      if (res.status === true) {
-        toast.success(res.message || 'Profile image uploaded successfully');
+      if (res.status === true && res.data) {
+        toast.success(res.message || 'Image uploaded successfully');
         return res.data;
       } else {
-        toast.error(res.message || 'Failed to upload profile image');
-        return rejectWithValue(res.message);
+        toast.error(res.message || 'Failed to upload image');
+        return rejectWithValue(res.message || 'Failed to upload image');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error uploading profile image');
-      return rejectWithValue(error.response?.data || error.message);
-    }
-  }
-);
-
-export const UpdateProfileImage = createAsyncThunk<any, { employeeId: number; imageUrl: string }>(
-  'campusEmployee/updateProfileImage',
-  async ({ employeeId, imageUrl }, { rejectWithValue }) => {
-    try {
-      const url = `${baseURL}/api/HREmployee/UpdateProfileImage?employeeId=${employeeId}&imageUrl=${encodeURIComponent(imageUrl)}`;
-      let response;
-      try {
-        response = await axios.post(url);
-      } catch (err: any) {
-        if (err.response?.status === 405) {
-          response = await axios.put(url);
-        } else {
-          throw err;
+      let errMsg = 'Error uploading image';
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errMsg = error.response.data;
+        } else if (error.response.data.message) {
+          errMsg = error.response.data.message;
         }
+      } else if (error.message) {
+        errMsg = error.message;
       }
-      const res = response.data;
-      if (res.status === true) {
-        toast.success(res.message || 'Profile image updated successfully');
-        return res;
-      } else {
-        toast.error(res.message || 'Failed to update profile image');
-        return rejectWithValue(res.message);
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error updating profile image');
-      return rejectWithValue(error.response?.data || error.message);
+      toast.error(errMsg);
+      return rejectWithValue(errMsg);
     }
   }
 );
@@ -295,7 +320,11 @@ export const UpdateProfileImage = createAsyncThunk<any, { employeeId: number; im
 const campusEmployeeSlice = createSlice({
   name: 'campusEmployee',
   initialState,
-  reducers: {},
+  reducers: {
+    clearEmployeeKey: (state) => {
+      state.generatedEmployeeKey = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(GetAllEmployees.pending, (state) => { state.loading = true; state.error = null; })
@@ -381,4 +410,5 @@ const campusEmployeeSlice = createSlice({
   },
 });
 
+export const { clearEmployeeKey } = campusEmployeeSlice.actions;
 export default campusEmployeeSlice.reducer;

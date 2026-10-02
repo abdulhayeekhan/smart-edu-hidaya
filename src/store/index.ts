@@ -1,4 +1,4 @@
-// ** Toolkit imports
+// Redux Toolkit Store Configuration
 import { configureStore } from '@reduxjs/toolkit'
 
 
@@ -49,6 +49,10 @@ import ClassTeacherReducer from './apps/class-teacher';
 import NotificationConfigReducer from './apps/notification-configuration';
 import ClassTimetableReducer from './apps/class-timetable';
 import StudentPromotionSlice from './apps/student-promotion';
+import SalaryPayrollReducer from './apps/salary-payroll/index';
+import AllowanceTypeReducer from './apps/allowance-type/index';
+import DeductionReducer from './apps/deduction/index';
+import EmpAllowanceDeductionReducer from './apps/emp-allowance-deduction/index';
 
 // Create the store
 export const store = configureStore({
@@ -98,7 +102,11 @@ export const store = configureStore({
     classTeacher: ClassTeacherReducer,
     notificationConfig: NotificationConfigReducer,
     classTimetable: ClassTimetableReducer,
-    studentPromotion: StudentPromotionSlice
+    studentPromotion: StudentPromotionSlice,
+    salaryPayroll: SalaryPayrollReducer,
+    allowanceType: AllowanceTypeReducer,
+    deduction: DeductionReducer,
+    empAllowanceDeduction: EmpAllowanceDeductionReducer
   },
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({

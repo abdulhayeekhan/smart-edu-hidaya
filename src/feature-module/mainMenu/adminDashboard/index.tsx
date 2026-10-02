@@ -34,6 +34,7 @@ interface LoginInfo {
 
 interface RoleRight {
   moduleName: string;
+  viewRight?: boolean;
   canView?: boolean;
   canEdit?: boolean;
   [key: string]: any;
@@ -78,6 +79,82 @@ const AdminDashboard = () => {
   const loginInfo = JSON.parse(localStorage?.getItem("loginInfo") || "{}");
   const roleId = loginInfo?.roleId;
 
+  const CheckRoleRight = (moduleName: string | string[]) => {
+    if (roleId === 1 || rolesId === 1) return true;
+    const savedRights: RoleRight[] = JSON.parse(localStorage.getItem("roleRights") || "[]");
+    const moduleNames = Array.isArray(moduleName) ? moduleName : [moduleName];
+    return moduleNames.some(name => {
+      if (!name) return false;
+      const normTarget = name.trim().toLowerCase().replace(/\s+/g, '');
+      const normTargetNoS = normTarget.endsWith('s') ? normTarget.slice(0, -1) : normTarget;
+      return savedRights.some((i) => {
+        if (!i?.moduleName) return false;
+        const hasView = i.viewRight ?? i.canView ?? false;
+        if (!hasView) return false;
+        const normName = i.moduleName.trim().toLowerCase().replace(/\s+/g, '');
+        const normNameNoS = normName.endsWith('s') ? normName.slice(0, -1) : normName;
+        return normName === normTarget || normNameNoS === normTargetNoS;
+      });
+    });
+  };
+
+  const canViewTotalEarnings = CheckRoleRight([
+    "Collection Report",
+    "Collection Reports",
+    "Fee Collection Report",
+  ]) || roleId === 1 || rolesId === 1;
+
+  const canViewTotalExpenses = CheckRoleRight([
+    "Branch Expense Report",
+    "Campus Expense Report",
+    "Expense Report",
+    "Campus Expense Reports",
+    "Branch Expense Reports",
+    "Expenses",
+    "Expense",
+  ]) || roleId === 1 || rolesId === 1;
+
+  const canViewFeesCollection = CheckRoleRight([
+    "Collection Report",
+    "Collection Reports",
+    "Fee Collection Report",
+    "Fees Collection",
+    "Fee Collection",
+    "Fees Report",
+    "Fee Receipt",
+    "Fee Receipts",
+  ]) || roleId === 1 || rolesId === 1;
+
+  const canViewInquiries = CheckRoleRight([
+    "Inquiries",
+    "Inquiry",
+    "Student Inquiries",
+    "Student Inquiry",
+  ]) || roleId === 1 || rolesId === 1;
+
+  const canViewAdmissions = CheckRoleRight([
+    "Admissions",
+    "Admission",
+    "Student Admissions",
+    "Student Admission",
+    "Students",
+    "Student",
+    "Student List",
+    "Student Report",
+    "Campus Admission Status Report",
+  ]) || roleId === 1 || rolesId === 1;
+
+  const canViewTeachers = CheckRoleRight([
+    "Teachers",
+    "Teacher",
+    "All Teachers",
+    "Teacher List",
+    "Staff Attendance Report",
+    "Salary Report",
+    "Employee",
+    "Employees",
+  ]) || roleId === 1 || rolesId === 1;
+
   const dispatch = useDispatch<AppDispatch>();
   const [filter, setFilter] = useState<NoticeFilter>({
     pageNo: 1,
@@ -95,6 +172,7 @@ const AdminDashboard = () => {
 
 
   useEffect(() => {
+    if (!canViewInquiries) return;
     // 1. Logic to determine filter parameters
     let currentFilter = {
       ...inquiryFilter,
@@ -122,7 +200,7 @@ const AdminDashboard = () => {
     // 3. Dispatch the API call with the freshly calculated filter
     dispatch(GetInquiries(currentFilter));
 
-  }, [userLevel, userLevelId, dispatch]);
+  }, [userLevel, userLevelId, dispatch, canViewInquiries]);
 
   const [admissionFilter, setAdmissionFilter] = useState<AdmissionFilter>({
     pageNo: 1,
@@ -133,6 +211,7 @@ const AdminDashboard = () => {
   const [totalAdmissions, setTotalAdmissions] = useState(0)
   console.log('totalAdmissions:', totalAdmissions)
   useEffect(() => {
+    if (!canViewAdmissions) return;
     // 1. Logic to determine filter parameters
     const currentAdmissionFilter = {
       ...admissionFilter,
@@ -163,10 +242,11 @@ const AdminDashboard = () => {
     // 3. Dispatch the API call with the freshly calculated filter
     //dispatch(GetAdmissions(currentAdmissionFilter));
 
-  }, [userLevel, userLevelId, dispatch, admissionFilter.campusId]);
+  }, [userLevel, userLevelId, dispatch, admissionFilter.campusId, canViewAdmissions]);
 
   const [totalTeachers, setTotalTeachers] = useState(0);
   useEffect(() => {
+    if (!canViewTeachers && !canViewAdmissions) return;
     const GetTeachersList = async () => {
       try {
         setTotalTeachers(0);
@@ -191,7 +271,7 @@ const AdminDashboard = () => {
       }
     };
     GetTeachersList();
-  }, [userLevel, userLevelId]);
+  }, [userLevel, userLevelId, canViewTeachers, canViewAdmissions]);
 
   const { lastSessionId } = useLastAcademicSession();
 
@@ -245,12 +325,6 @@ const AdminDashboard = () => {
     dispatch(GetAllNotices(filter))
   }, [dispatch])
 
-  const CheckRoleRight = (moduleName: string) => {
-    const savedRights: RoleRight[] = JSON.parse(localStorage.getItem("roleRights") || "[]");
-    const found = savedRights.find((i) => i?.moduleName === moduleName);
-    const viewRight = found?.viewRight ?? false;
-    return viewRight;
-  }
   const [date, setDate] = useState<Nullable<Date>>(null);
   function SampleNextArrow(props: any) {
     const { style, onClick } = props;
@@ -596,8 +670,10 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchCampusFeeStats(selectedGlobalFilter.value);
-  }, [userLevel, userLevelId, selectedGlobalFilter.value]);
+    if (canViewFeesCollection) {
+      fetchCampusFeeStats(selectedGlobalFilter.value);
+    }
+  }, [userLevel, userLevelId, selectedGlobalFilter.value, canViewFeesCollection]);
 
   const fetchCampusEarningExpenseStats = async (filterValue: number) => {
     if (userLevel !== 3 || !userLevelId) {
@@ -628,8 +704,10 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchCampusEarningExpenseStats(selectedGlobalFilter.value);
-  }, [userLevel, userLevelId, selectedGlobalFilter.value]);
+    if (canViewTotalEarnings || canViewTotalExpenses) {
+      fetchCampusEarningExpenseStats(selectedGlobalFilter.value);
+    }
+  }, [userLevel, userLevelId, selectedGlobalFilter.value, canViewTotalEarnings, canViewTotalExpenses]);
 
   const [totalEarningArea, setTotalEarningArea] = useState<any>({
     chart: {
@@ -724,7 +802,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="d-flex my-xl-auto right-content align-items-center flex-wrap">
-                {(CheckRoleRight("Inquiries") || roleId === 1) && (
+                {canViewInquiries && (
                   <div className="mb-2">
                     <Link
                       to={routes.addstudentInquiry}
@@ -735,7 +813,7 @@ const AdminDashboard = () => {
                     </Link>
                   </div>
                 )}
-                {(CheckRoleRight("Fee Receipt") || roleId === 1) && (
+                {canViewFeesCollection && (
                   <div className="mb-2">
                     <Link
                       to={routes.feeReceipt}
@@ -835,95 +913,109 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="row">
-              {/* Total Inquiries */}
-              <div className="col-xxl-3 col-sm-6 d-flex">
-                <div className="card flex-fill animate-card border-0">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar avatar-xl bg-danger-transparent me-2 p-1">
-                        <ImageWithBasePath
-                          src="assets/img/icons/smile-chat.svg"
-                          alt="img"
-                        />
-                      </div>
-                      <div className="overflow-hidden flex-fill">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <h2 className="counter">
-                            <CountUp end={totalInquiries} />
-                          </h2>
+            {(canViewInquiries || canViewAdmissions || canViewTeachers) && (
+              <div className="row">
+                {/* Total Inquiries */}
+                {canViewInquiries && (
+                  <div className="col-xxl-3 col-sm-6 d-flex">
+                    <div className="card flex-fill animate-card border-0">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center">
+                          <div className="avatar avatar-xl bg-danger-transparent me-2 p-1">
+                            <ImageWithBasePath
+                              src="assets/img/icons/smile-chat.svg"
+                              alt="img"
+                            />
+                          </div>
+                          <div className="overflow-hidden flex-fill">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <h2 className="counter">
+                                <CountUp end={totalInquiries} />
+                              </h2>
+                            </div>
+                            <p>Total Inquiries</p>
+                          </div>
                         </div>
-                        <p>Total Inquiries</p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              {/* /Total Students */}
-              {/* Total Students */}
-              <div className="col-xxl-3 col-sm-6 d-flex">
-                <div className="card flex-fill animate-card border-0">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar avatar-xl bg-danger-transparent me-2 p-1">
-                        <ImageWithBasePath
-                          src="assets/img/icons/student.svg"
-                          alt="img"
-                        />
-                      </div>
-                      <div className="overflow-hidden flex-fill">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <h2 className="counter">
-                            <CountUp end={totalAdmissions} />
-                          </h2>
+                )}
+                {/* /Total Inquiries */}
+
+                {/* Total Students */}
+                {canViewAdmissions && (
+                  <div className="col-xxl-3 col-sm-6 d-flex">
+                    <div className="card flex-fill animate-card border-0">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center">
+                          <div className="avatar avatar-xl bg-danger-transparent me-2 p-1">
+                            <ImageWithBasePath
+                              src="assets/img/icons/student.svg"
+                              alt="img"
+                            />
+                          </div>
+                          <div className="overflow-hidden flex-fill">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <h2 className="counter">
+                                <CountUp end={totalAdmissions} />
+                              </h2>
+                            </div>
+                            <p>Total Students</p>
+                          </div>
                         </div>
-                        <p>Total Students</p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              {/* Total Teachers */}
-              <div className="col-xxl-3 col-sm-6 d-flex">
-                <div className="card flex-fill animate-card border-0">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar avatar-xl bg-primary-transparent me-2 p-1">
-                        <i className="ti ti-chalkboard-user text-primary fs-36" />
-                      </div>
-                      <div className="overflow-hidden flex-fill">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <h2 className="counter">
-                            <CountUp end={totalTeachers} />
-                          </h2>
+                )}
+                {/* /Total Students */}
+
+                {/* Total Teachers */}
+                {canViewTeachers && (
+                  <div className="col-xxl-3 col-sm-6 d-flex">
+                    <div className="card flex-fill animate-card border-0">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center">
+                          <div className="avatar avatar-xl bg-primary-transparent me-2 p-1">
+                            <i className="ti ti-chalkboard-user text-primary fs-36" />
+                          </div>
+                          <div className="overflow-hidden flex-fill">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <h2 className="counter">
+                                <CountUp end={totalTeachers} />
+                              </h2>
+                            </div>
+                            <p>Total Teachers</p>
+                          </div>
                         </div>
-                        <p>Total Teachers</p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              {/* Workload */}
-              <div className="col-xxl-3 col-sm-6 d-flex">
-                <div className="card flex-fill animate-card border-0">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center">
-                      <div className="avatar avatar-xl bg-success-transparent me-2 p-1">
-                        <i className="ti ti-chart-pie text-success fs-36" />
-                      </div>
-                      <div className="overflow-hidden flex-fill">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <h2 className="counter">
-                            <span>{totalTeachers > 0 ? (totalAdmissions / totalTeachers).toFixed(1) : 0}</span>
-                          </h2>
+                )}
+
+                {/* Workload */}
+                {canViewAdmissions && canViewTeachers && (
+                  <div className="col-xxl-3 col-sm-6 d-flex">
+                    <div className="card flex-fill animate-card border-0">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center">
+                          <div className="avatar avatar-xl bg-success-transparent me-2 p-1">
+                            <i className="ti ti-chart-pie text-success fs-36" />
+                          </div>
+                          <div className="overflow-hidden flex-fill">
+                            <div className="d-flex align-items-center justify-content-between">
+                              <h2 className="counter">
+                                <span>{totalTeachers > 0 ? (totalAdmissions / totalTeachers).toFixed(1) : 0}</span>
+                              </h2>
+                            </div>
+                            <p>Admissions per Teacher</p>
+                          </div>
                         </div>
-                        <p>Admissions per Teacher</p>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
-            </div>
+            )}
 
             <div className="row">
               {/* Schedules */}
@@ -1431,7 +1523,7 @@ const AdminDashboard = () => {
                         )}
                       </div>
                       <div className="item">
-                        {(CheckRoleRight("Fee Invoices") || roleId === 1) && (
+                        {canViewTotalExpenses && (
                           <Link
                             to={routes.expense}
                             className="d-block bg-primary-transparent ronded p-2 text-center mb-3 class-hover"
@@ -1719,38 +1811,40 @@ const AdminDashboard = () => {
 
                 <div className="row">
                   {/* Fees Collection */}
-                  <div className="col-xxl-8 col-xl-6 d-flex">
-                  <div className="card flex-fill">
-                    <div className="card-header  d-flex align-items-center justify-content-between">
-                      <h4 className="card-title">Fees Collection</h4>
-                      <div className="dropdown">
-                        <Link
-                          to="#"
-                          className="bg-white"
-                        >
-                          <i className="ti ti-calendar  me-2" />
-                          {selectedGlobalFilter.label}
-                        </Link>
+                  {canViewFeesCollection && (
+                    <div className={roleId === 1 ? "col-xxl-8 col-xl-6 d-flex" : "col-xxl-12 col-xl-12 d-flex"}>
+                      <div className="card flex-fill">
+                        <div className="card-header  d-flex align-items-center justify-content-between">
+                          <h4 className="card-title">Fees Collection</h4>
+                          <div className="dropdown">
+                            <Link
+                              to="#"
+                              className="bg-white"
+                            >
+                              <i className="ti ti-calendar  me-2" />
+                              {selectedGlobalFilter.label}
+                            </Link>
+                          </div>
+                        </div>
+                        <div className="card-body pb-0">
+                          <ReactApexChart
+                            id="fees-chart"
+                            options={feesBarOptions}
+                            series={feesBarSeries}
+                            type="bar"
+                            height={270}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="card-body pb-0">
-                      <ReactApexChart
-                        id="fees-chart"
-                        options={feesBarOptions}
-                        series={feesBarSeries}
-                        type="bar"
-                        height={270}
-                      />
-                    </div>
-                  </div>
-                </div>
-                {/* /Fees Collection */}
+                  )}
+                  {/* /Fees Collection */}
 
-                {/* Leave Requests */}
-                {roleId === 1 && (
-                  <div className="col-xxl-4 col-xl-6 d-flex">
-                    <div className="card flex-fill">
-                      <div className="card-header  d-flex align-items-center justify-content-between">
+                  {/* Leave Requests */}
+                  {roleId === 1 && (
+                    <div className={canViewFeesCollection ? "col-xxl-4 col-xl-6 d-flex" : "col-xxl-12 col-xl-12 d-flex"}>
+                      <div className="card flex-fill">
+                        <div className="card-header  d-flex align-items-center justify-content-between">
                         <h4 className="card-title">Leave Requests</h4>
                         <div className="dropdown">
                           <Link
@@ -1998,48 +2092,52 @@ const AdminDashboard = () => {
               </div>
             )}
             <div className="row">
-              {(roleId === 1 || userLevel === 3) && (
+              {(roleId === 1 || userLevel === 3) && (canViewTotalEarnings || canViewTotalExpenses) && (
                 <div className="col-xxl-4 col-xl-6 d-flex flex-column">
-                  <div className="card flex-fill">
-                    <div className="card-body">
-                      <div className="d-flex align-items-center justify-content-between">
-                        <div>
-                          <h6 className="mb-1">Total Earnings</h6>
-                          <h2>{earningExpenseStats?.totalEarning?.toLocaleString() || '0'}</h2>
+                  {canViewTotalEarnings && (
+                    <div className="card flex-fill">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div>
+                            <h6 className="mb-1">Total Earnings</h6>
+                            <h2>{earningExpenseStats?.totalEarning?.toLocaleString() || '0'}</h2>
+                          </div>
+                          <span className="avatar avatar-lg bg-primary">
+                            <i className="ti ti-user-dollar" />
+                          </span>
                         </div>
-                        <span className="avatar avatar-lg bg-primary">
-                          <i className="ti ti-user-dollar" />
-                        </span>
                       </div>
+                      <ReactApexChart
+                        id="total-earning"
+                        options={totalEarningArea}
+                        series={totalEarningArea.series}
+                        type="area"
+                        height={90}
+                      />
                     </div>
-                    <ReactApexChart
-                      id="total-earning"
-                      options={totalEarningArea}
-                      series={totalEarningArea.series}
-                      type="area"
-                      height={90}
-                    />
-                  </div>
-                  <div className="card flex-fill">
-                    <div className="card-body">
-                      <div className="d-flex align-items-center justify-content-between">
-                        <div>
-                          <h6 className="mb-1">Total Expenses</h6>
-                          <h2>{earningExpenseStats?.totalExpense?.toLocaleString() || '0'}</h2>
+                  )}
+                  {canViewTotalExpenses && (
+                    <div className="card flex-fill">
+                      <div className="card-body">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <div>
+                            <h6 className="mb-1">Total Expenses</h6>
+                            <h2>{earningExpenseStats?.totalExpense?.toLocaleString() || '0'}</h2>
+                          </div>
+                          <span className="avatar avatar-lg bg-danger">
+                            <i className="ti ti-user-dollar" />
+                          </span>
                         </div>
-                        <span className="avatar avatar-lg bg-danger">
-                          <i className="ti ti-user-dollar" />
-                        </span>
                       </div>
+                      <ReactApexChart
+                        id="total-expenses"
+                        options={totalExpenseArea}
+                        series={totalExpenseArea.series}
+                        type="area"
+                        height={90}
+                      />
                     </div>
-                    <ReactApexChart
-                      id="total-expenses"
-                      options={totalExpenseArea}
-                      series={totalExpenseArea.series}
-                      type="area"
-                      height={90}
-                    />
-                  </div>
+                  )}
                 </div>
               )}
               {/* /Total Earnings */}
