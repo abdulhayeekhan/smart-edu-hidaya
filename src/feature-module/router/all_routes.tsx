@@ -208,6 +208,7 @@ export const all_routes = {
   addstudentInquiry: "/student/add-inquiry",
   studentGrid: "/student/student-grid",
   studentPromotion: "/student/student-promotion",
+  studentMigration: "/student/student-migration",
   studentDetail: "/student/student-details/:id",
   studentFeeDiscount: "/student/student-fee-discount/:id",
   studentTimeTable: "/student/student-time-table",

@@ -145,6 +145,7 @@ export const SidebarData = [
           //   subLink5: routes.studentTimeTable,
           // },
           { label: "Student Promotion", link: routes.studentPromotion },
+          { label: "Student Migration", link: routes.studentMigration },
           { label: "Student Card", link: routes.studentCard, moduleName: "Student Card" },
         ],
       },

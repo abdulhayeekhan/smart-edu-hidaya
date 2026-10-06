@@ -133,6 +133,7 @@ import ClassHomeWork from "../academic/class-home-work";
 import ExamResult from "../academic/examinations/exam-results";
 import ExamAttendance from "../academic/examinations/exam-attendance";
 import StudentPromotion from "../peoples/students/student-promotion";
+import StudentMigration from "../peoples/students/student-migration";
 import TeacherGrid from "../peoples/teacher/teacher-grid";
 import TeacherForm from "../peoples/teacher/teacherForm";
 import ClassTimetable from "../academic/class-timetable";
@@ -927,6 +928,10 @@ export const publicRoutes = [
   {
     path: routes.studentPromotion,
     element: <StudentPromotion />,
+  },
+  {
+    path: routes.studentMigration,
+    element: <StudentMigration />,
   },
   {
     path: routes.AcademicReason,

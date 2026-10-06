@@ -56,7 +56,8 @@ export const useAdmissions = (params = {}) => {
               {regNo} - <strong>{name}</strong> - {fatherName}
             </span>
           ),
-          status: item.status
+          status: item.status,
+          raw: item
         };
       })
       .sort((a, b) => b.value - a.value);

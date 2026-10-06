@@ -1,6 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useState, MouseEvent } from "react";
+import { FetchMigrationList } from "../../../store/apps/student-migration";
 import {
   setDataLayout,
   setDataTheme,
@@ -12,11 +14,9 @@ import {
   setMobileSidebar,
   toggleMiniSidebar,
 } from "../../data/redux/sidebarSlice";
-import { useState } from "react";
 import { all_routes } from "../../../feature-module/router/all_routes";
 import { Companylogo, CompanyWhiteLogo, CompnayIcon } from '../../../environment'
 import useAuth from "../../../hooks/useAuth";
-import { MouseEvent } from "react";
 
 const Header = () => {
   const { t, i18n } = useTranslation();
@@ -25,6 +25,8 @@ const Header = () => {
   const dataTheme = useSelector((state: any) => state.themeSetting.dataTheme);
   const dataLayout = useSelector((state: any) => state.themeSetting.dataLayout);
   const [notificationVisible, setNotificationVisible] = useState(false);
+
+  const toggleNotification = () => setNotificationVisible(!notificationVisible);
 
   const mobileSidebar = useSelector(
     (state: any) => state.sidebarSlice.mobileSidebar
@@ -117,6 +119,21 @@ const Header = () => {
     e.preventDefault();
     await logout();
   };
+
+  const { migrationList } = useSelector((state: any) => state.studentMigration || { migrationList: [] });
+  const pendingMigrations = migrationList?.filter((m: any) => m.status === 'pending') || [];
+
+  useEffect(() => {
+    dispatch(FetchMigrationList({
+      fromCampusId: null,
+      toCampusId: null,
+      status: 'pending',
+      admissionId: null,
+      search: '',
+      pageNo: 1,
+      pageSize: 5
+    }) as any);
+  }, [dispatch]);
 
   return (
     <>
@@ -341,158 +358,49 @@ const Header = () => {
                   }`}
                 id="notification_item"
               >
-                {/* <Link
+                <Link
                   onClick={toggleNotification}
                   to="#"
-                  className="btn btn-outline-light bg-white btn-icon position-relative me-1"
+                  className="btn btn-outline-light bg-transparent d-flex align-items-center p-2 border-0 position-relative me-1"
                   id="notification_popup"
+                  data-bs-toggle="dropdown"
                 >
-                  <i className="ti ti-bell" />
-                  <span className="notification-status-dot" />
-                </Link> */}
+                  <i className="ti ti-bell fs-5" style={{ color: '#ffffff' }} />
+                  {pendingMigrations.length > 0 && <span className="notification-status-dot" />}
+                </Link>
                 <div className="dropdown-menu dropdown-menu-end notification-dropdown p-4">
                   <div className="d-flex align-items-center justify-content-between border-bottom p-0 pb-3 mb-3">
-                    <h4 className="notification-title">Notifications (2)</h4>
-                    <div className="d-flex align-items-center">
-                      <Link to="#" className="text-primary fs-15 me-3 lh-1">
-                        Mark all as read
-                      </Link>
-                      <div className="dropdown">
-                        <Link
-                          to="#"
-                          className="bg-white dropdown-toggle"
-                          data-bs-toggle="dropdown"
-                        >
-                          <i className="ti ti-calendar-due me-1" />
-                          Today
-                        </Link>
-                        <ul className="dropdown-menu mt-2 p-3">
-                          <li>
-                            <Link to="#" className="dropdown-item rounded-1">
-                              This Week
-                            </Link>
-                          </li>
-                          <li>
-                            <Link to="#" className="dropdown-item rounded-1">
-                              Last Week
-                            </Link>
-                          </li>
-                          <li>
-                            <Link to="#" className="dropdown-item rounded-1">
-                              Last Week
-                            </Link>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
+                    <h4 className="notification-title">Notifications ({pendingMigrations.length})</h4>
                   </div>
                   <div className="noti-content">
                     <div className="d-flex flex-column">
-                      <div className="border-bottom mb-3 pb-3">
-                        <Link to={routes.activity}>
-                          <div className="d-flex">
-                            <span className="avatar avatar-lg me-2 flex-shrink-0">
-                              <ImageWithBasePath
-                                src="assets/img/profiles/avatar-27.jpg"
-                                alt="Profile"
-                              />
-                            </span>
-                            <div className="flex-grow-1">
-                              <p className="mb-1">
-                                <span className="text-dark fw-semibold">
-                                  Shawn
-                                </span>{' '}
-                                performance in Math is below the threshold.
-                              </p>
-                              <span>Just Now</span>
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
-                      <div className="border-bottom mb-3 pb-3">
-                        <Link to={routes.activity} className="pb-0">
-                          <div className="d-flex">
-                            <span className="avatar avatar-lg me-2 flex-shrink-0">
-                              <ImageWithBasePath
-                                src="assets/img/profiles/avatar-23.jpg"
-                                alt="Profile"
-                              />
-                            </span>
-                            <div className="flex-grow-1">
-                              <p className="mb-1">
-                                <span className="text-dark fw-semibold">
-                                  Sylvia
-                                </span>{" "}
-                                added appointment on 02:00 PM
-                              </p>
-                              <span>10 mins ago</span>
-                              <div className="d-flex justify-content-start align-items-center mt-1">
-                                <span className="btn btn-light btn-sm me-2">
-                                  Deny
-                                </span>
-                                <span className="btn btn-primary btn-sm">
-                                  Approve
-                                </span>
+                      {pendingMigrations.map((migration: any) => (
+                        <div key={migration.id} className="border-bottom mb-3 pb-3">
+                          <Link to={routes.studentMigration}>
+                            <div className="d-flex">
+                              <span className="avatar avatar-lg me-2 flex-shrink-0 bg-primary-transparent text-primary rounded-circle d-flex align-items-center justify-content-center">
+                                <i className="ti ti-exchange" />
+                              </span>
+                              <div className="flex-grow-1">
+                                <p className="mb-1">
+                                  New migration request for <span className="text-dark fw-semibold">{migration.studentName}</span> from <span className="text-dark fw-semibold">{migration.fromCampusName}</span> to <span className="text-dark fw-semibold">{migration.toCampusName}</span>
+                                </p>
+                                <span>{new Date(migration.requestedAt).toLocaleString()}</span>
                               </div>
                             </div>
-                          </div>
-                        </Link>
-                      </div>
-                      <div className="border-bottom mb-3 pb-3">
-                        <Link to={routes.activity}>
-                          <div className="d-flex">
-                            <span className="avatar avatar-lg me-2 flex-shrink-0">
-                              <ImageWithBasePath
-                                src="assets/img/profiles/avatar-25.jpg"
-                                alt="Profile"
-                              />
-                            </span>
-                            <div className="flex-grow-1">
-                              <p className="mb-1">
-                                New student record{" "}
-                                <span className="text-dark fw-semibold">
-                                  {" "}
-                                  George
-                                </span>{" "}
-                                is created by{" "}
-                                <span className="text-dark fw-semibold">
-                                  Teressa
-                                </span>
-                              </p>
-                              <span>2 hrs ago</span>
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
-                      <div className="border-0 mb-3 pb-0">
-                        <Link to={routes.activity}>
-                          <div className="d-flex">
-                            <span className="avatar avatar-lg me-2 flex-shrink-0">
-                              <ImageWithBasePath
-                                src="assets/img/profiles/avatar-01.jpg"
-                                alt="Profile"
-                              />
-                            </span>
-                            <div className="flex-grow-1">
-                              <p className="mb-1">
-                                A new teacher record for{" "}
-                                <span className="text-dark fw-semibold">
-                                  Elisa
-                                </span>
-                              </p>
-                              <span>09:45 AM</span>
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
+                          </Link>
+                        </div>
+                      ))}
+                      {pendingMigrations.length === 0 && (
+                        <div className="text-center py-4 text-muted">
+                          No pending requests
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="d-flex p-0">
-                    <Link to="#" className="btn btn-light w-100 me-2">
-                      Cancel
-                    </Link>
-                    <Link to={routes.activity} className="btn btn-primary w-100">
-                      View All
+                    <Link to={routes.studentMigration} className="btn btn-primary w-100">
+                      View All Migrations
                     </Link>
                   </div>
                 </div>

@@ -49,6 +49,7 @@ import ClassTeacherReducer from './apps/class-teacher';
 import NotificationConfigReducer from './apps/notification-configuration';
 import ClassTimetableReducer from './apps/class-timetable';
 import StudentPromotionSlice from './apps/student-promotion';
+import StudentMigrationSlice from './apps/student-migration';
 import SalaryPayrollReducer from './apps/salary-payroll/index';
 import AllowanceTypeReducer from './apps/allowance-type/index';
 import DeductionReducer from './apps/deduction/index';
@@ -103,6 +104,7 @@ export const store = configureStore({
     notificationConfig: NotificationConfigReducer,
     classTimetable: ClassTimetableReducer,
     studentPromotion: StudentPromotionSlice,
+    studentMigration: StudentMigrationSlice,
     salaryPayroll: SalaryPayrollReducer,
     allowanceType: AllowanceTypeReducer,
     deduction: DeductionReducer,
