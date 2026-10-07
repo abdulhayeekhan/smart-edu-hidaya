@@ -88,7 +88,7 @@ const CampusChartOfAccount = () => {
             const roots: any[] = [];
 
             flatAccounts.forEach(item => {
-                map[item.id] = { ...item, children: [] };
+                map[item.id] = { ...item, level: item.accountLevel, children: [] };
             });
 
             flatAccounts.forEach(item => {
