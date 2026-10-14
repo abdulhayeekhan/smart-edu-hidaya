@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { GetChildAccount } from "../../../../store/apps/ho-coa";
+import { HOBankParentHeadId } from "../../../../environment";
 
-const BANK_ACCOUNT_PARENT_ID = Number(process.env.REACT_APP_BANK_ACCOUNT_PARENT_ID || 86);
+const BANK_ACCOUNT_PARENT_ID =
+  HOBankParentHeadId ||
+  Number(
+    process.env.REACT_APP_HO_BANK_PARENT_HEAD_ID ||
+    86
+  );
 
 export const useHOBankAccount = (campusId) => {
   const dispatch = useDispatch();

@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { GetChildAccount } from "../../../../store/apps/ho-coa";
+import { HOCashHeadParentId } from "../../../../environment";
 
-const CASH_HEAD_ACCOUNT_ID = Number(process.env.REACT_APP_CASH_HEAD_ACCOUNT_ID || 88);
+const CASH_HEAD_ACCOUNT_ID =
+  HOCashHeadParentId ||
+  Number(
+    process.env.REACT_APP_HO_CASH_HEAD_PARENT_ID ||
+    88
+  );
 
 export const useHOcashAccount = (campusId) => {
   const dispatch = useDispatch();

@@ -25,4 +25,17 @@ export const CashHeadAccountId = Number(process.env.REACT_APP_CASH_HEAD_ACCOUNT_
 export const BankAccountParentId = Number(process.env.REACT_APP_BANK_ACCOUNT_PARENT_ID || 86);
 export const DiscountHeadId = Number(process.env.REACT_APP_DISCOUNT_HEAD_ID || 30);
 export const FeeReceiptHeadId = Number(process.env.REACT_APP_FEE_RECEIPT_HEAD_ID || 88);
+
+// Head Office Voucher Configuration
+export const HOCashHeadParentId = Number(
+  process.env.REACT_APP_HO_CASH_HEAD_PARENT_ID ||
+  process.env.REACT_APP_HO_CASH_HEAD_ACCOUNT_ID ||
+  88
+);
+export const HOBankParentHeadId = Number(
+  process.env.REACT_APP_HO_BANK_PARENT_HEAD_ID ||
+  process.env.REACT_APP_HO_BANK_ACCOUNT_PARENT_ID ||
+  86
+);
+
 
