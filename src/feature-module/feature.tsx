@@ -1,4 +1,4 @@
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Outlet, useLocation } from "react-router";
 import Header from "../core/common/header";
 import Sidebar from "../core/common/sidebar";
@@ -7,8 +7,10 @@ import Loader from "../core/common/loader";
 import ImageWithBasePath from "../core/common/imageWithBasePath";
 import { useEffect, useState } from "react";
 import { all_routes } from "./router/all_routes";
+import { setMobileSidebar } from "../core/data/redux/sidebarSlice";
 const Feature = () => {
   const routes = all_routes;
+  const dispatch = useDispatch();
   const [showLoader, setShowLoader] = useState(true);
   const mobileSidebar = useSelector(
     (state: any) => state.sidebarSlice.mobileSidebar
@@ -37,6 +39,7 @@ const Feature = () => {
     }
   }, [dataTheme]);
   useEffect(() => {
+    dispatch(setMobileSidebar(false));
     if (
       location.pathname === routes.adminDashboard ||
       location.pathname === routes.teacherDashboard ||
@@ -192,6 +195,24 @@ const Feature = () => {
             66% { transform: translate(-20px, 20px) scale(0.9); }
             100% { transform: translate(0px, 0px) scale(1); }
           }
+          @media (max-width: 991.98px) {
+            .sidebar,
+            .sidebar.glass-panel,
+            .slide-nav .sidebar,
+            .slide-nav .sidebar.glass-panel {
+              background: #001F3F !important;
+              background-color: #001F3F !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              box-shadow: 4px 0 30px rgba(0, 0, 0, 0.6) !important;
+              border-right: 1px solid rgba(212, 175, 55, 0.2) !important;
+            }
+            .sidebar .sidebar-inner,
+            .sidebar .slimScrollDiv {
+              background: #001F3F !important;
+              background-color: #001F3F !important;
+            }
+          }
         `}
       </style>
       
@@ -277,7 +298,10 @@ const Feature = () => {
       )}
       {/* <Loader/> */}
 
-      <div className="sidebar-overlay"></div>
+      <div
+        className={`sidebar-overlay ${mobileSidebar ? "opened" : ""}`}
+        onClick={() => dispatch(setMobileSidebar(false))}
+      ></div>
     </div>
     </>
   );

@@ -27,6 +27,7 @@ const EmployeeSidebar = ({ employeeId }: { employeeId: number }) => {
   const { selectedEmployee, loading } = useSelector((state: RootState) => state.campusEmployee);
 
   const [credentialUser, setCredentialUser] = useState<any>(null);
+  const [roleName, setRoleName] = useState<string>("");
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,23 @@ const EmployeeSidebar = ({ employeeId }: { employeeId: number }) => {
       setCredentialUser(null);
     }
   }, [selectedEmployee?.userId]);
+
+  useEffect(() => {
+    if (credentialUser?.roleId) {
+      axios
+        .get(`${baseURL}/api/Role/GetRole?roleId=${credentialUser.roleId}`)
+        .then((res) => {
+          const roleData = res.data?.data || res.data;
+          const name = roleData?.name || roleData?.roleName || "";
+          setRoleName(name);
+        })
+        .catch(() => {
+          setRoleName("");
+        });
+    } else {
+      setRoleName("");
+    }
+  }, [credentialUser?.roleId]);
 
   const fullName = [
     selectedEmployee?.firstName,
@@ -255,6 +273,14 @@ const EmployeeSidebar = ({ employeeId }: { employeeId: number }) => {
                     <dd className="col-7 mb-2 text-end fw-semibold text-primary">
                       {credentialUser.username || "—"}
                     </dd>
+                    {roleName && (
+                      <>
+                        <dt className="col-5 fw-medium text-muted mb-2">Role</dt>
+                        <dd className="col-7 mb-2 text-end fw-semibold text-dark">
+                          {roleName}
+                        </dd>
+                      </>
+                    )}
                   </>
                 )}
               </dl>

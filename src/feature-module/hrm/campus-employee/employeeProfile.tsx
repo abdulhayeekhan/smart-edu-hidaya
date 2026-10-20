@@ -119,6 +119,8 @@ const EmployeeProfile = () => {
   const [ledgerHead, setLedgerHead] = useState<LedgerDrawerHead | null>(null);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [credentialUser, setCredentialUser] = useState<any>(null);
+  const [roleName, setRoleName] = useState<string>("");
+  const [roleLoading, setRoleLoading] = useState<boolean>(false);
   const [debitAccountDetails, setDebitAccountDetails] = useState<any>(null);
   const [debitAccountLoading, setDebitAccountLoading] = useState(false);
   const baselineRef = useRef<Record<string, string>>({});
@@ -146,6 +148,28 @@ const EmployeeProfile = () => {
       setCredentialUser(null);
     }
   }, [selectedEmployee?.userId]);
+
+  useEffect(() => {
+    if (credentialUser?.roleId) {
+      setRoleLoading(true);
+      axios
+        .get(`${baseURL}/api/Role/GetRole?roleId=${credentialUser.roleId}`)
+        .then((res) => {
+          const roleData = res.data?.data || res.data;
+          const name = roleData?.name || roleData?.roleName || "";
+          setRoleName(name);
+        })
+        .catch((err) => {
+          console.error("Error fetching role details:", err);
+          setRoleName("");
+        })
+        .finally(() => {
+          setRoleLoading(false);
+        });
+    } else {
+      setRoleName("");
+    }
+  }, [credentialUser?.roleId]);
 
   useEffect(() => {
     if (selectedEmployee?.debitAccountId) {
@@ -901,7 +925,15 @@ const EmployeeProfile = () => {
                             <div className="col-md-4">
                               <p className="text-muted mb-1 fs-12">System Role</p>
                               <h6 className="fw-semibold mb-0 text-dark">
-                                {credentialUser?.roleId ? `Role ID: ${credentialUser.roleId}` : "Campus Staff"}
+                                {roleLoading ? (
+                                  <span className="text-muted fs-13">Loading...</span>
+                                ) : roleName ? (
+                                  roleName
+                                ) : credentialUser?.roleId ? (
+                                  `Role ID: ${credentialUser.roleId}`
+                                ) : (
+                                  "Campus Staff"
+                                )}
                               </h6>
                             </div>
                             <div className="col-md-4">

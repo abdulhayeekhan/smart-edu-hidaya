@@ -73,6 +73,42 @@ const SECTIONS: HubSection[] = [
     ],
   },
   {
+    title: "HRM Settings",
+    icon: "ti ti-users-group",
+    description: "Departments, designations, allowance types and deductions",
+    accent: "hrm",
+    tiles: [
+      {
+        label: "Departments",
+        moduleName: "Departments",
+        link: routes.departments,
+        icon: "ti ti-layout-distribute-horizontal",
+        description: "Campus and administrative departments",
+      },
+      {
+        label: "Designation",
+        moduleName: "Designation",
+        link: routes.designation,
+        icon: "ti ti-user-exclamation",
+        description: "Staff designations and roles",
+      },
+      {
+        label: "Allowance Type",
+        moduleName: "Allowance Type",
+        link: routes.allowanceTypes,
+        icon: "ti ti-cash-banknote",
+        description: "Payroll allowance heads and mapped accounts",
+      },
+      {
+        label: "Deduction",
+        moduleName: "Deduction",
+        link: routes.deductions,
+        icon: "ti ti-receipt-tax",
+        description: "Payroll deduction heads and mapped accounts",
+      },
+    ],
+  },
+  {
     title: "System Settings",
     icon: "ti ti-settings-cog",
     description: "Notifications and system-wide behaviour",

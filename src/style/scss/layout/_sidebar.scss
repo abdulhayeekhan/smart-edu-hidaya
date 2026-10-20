@@ -16,7 +16,8 @@
         margin-left: -575px;
         @include transition(all 0.4s ease);
         z-index: 1041;
-        background: $white;
+        background: #001F3F !important;
+        background-color: #001F3F !important;
     }
     @include respond-below(sm) {
         width: 100%;
@@ -859,16 +860,20 @@ body.mini-sidebar{
 .slide-nav{
     .sidebar {
         margin-left: 0;
+        @include respond-below(lg) {
+            background: #001F3F !important;
+            background-color: #001F3F !important;
+        }
     }
 }
 .sidebar-overlay {
     display: none;
     height: 100%;
     width: 100%;
-    z-index: 99;
+    z-index: 1040;
     background-color: rgba(0, 0, 0, 0.6);
     position: fixed;
-    top: 60px;
+    top: 0;
     left: 0;
     &.opened {
         display: block;

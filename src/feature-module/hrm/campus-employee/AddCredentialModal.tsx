@@ -13,6 +13,14 @@ interface Props {
   onSuccess: () => void;
 }
 
+const formatUsername = (val: string): string => {
+  if (!val) return "";
+  // Strip domain if email (take prefix before '@')
+  const prefix = val.includes("@") ? val.split("@")[0] : val;
+  // Disallow uppercase letters, spaces, and special characters (allow only lowercase a-z and 0-9)
+  return prefix.toLowerCase().replace(/[^a-z0-9]/g, "");
+};
+
 const AddCredentialModal: React.FC<Props> = ({ isOpen, setIsOpen, employee, onSuccess }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [form] = Form.useForm();
@@ -25,7 +33,7 @@ const AddCredentialModal: React.FC<Props> = ({ isOpen, setIsOpen, employee, onSu
   useEffect(() => {
     if (isOpen && employee) {
       form.setFieldsValue({
-        username: employee.email || "",
+        username: formatUsername(employee.email || ""),
         password: "",
         email: employee.email || "",
         contactNumber: employee.contactNumber || "",
@@ -41,7 +49,7 @@ const AddCredentialModal: React.FC<Props> = ({ isOpen, setIsOpen, employee, onSu
       userLevel: userLevel,
       userLevelId: employee.campusId,
       roleId: values.roleId,
-      username: values.username,
+      username: formatUsername(values.username),
       firstname: employee.firstName || "",
       lastname: employee.lastName || "",
       password: values.password,
@@ -103,7 +111,15 @@ const AddCredentialModal: React.FC<Props> = ({ isOpen, setIsOpen, employee, onSu
           <Form.Item
             label="Username"
             name="username"
-            rules={[{ required: true, message: "Please enter a username" }]}
+            normalize={(val) => formatUsername(val)}
+            rules={[
+              { required: true, message: "Please enter a username" },
+              {
+                pattern: /^[a-z0-9]+$/,
+                message: "Username must contain only lowercase letters and numbers (no spaces or special characters)",
+              },
+            ]}
+            extra="Only lowercase letters and numbers are allowed (no spaces or special characters)."
           >
             <Input placeholder="Username" />
           </Form.Item>
